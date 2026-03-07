@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@std/cli@1": "1.0.28",
     "jsr:@std/crypto@1": "1.0.5",
+    "jsr:@std/dotenv@*": "0.225.6",
     "jsr:@std/encoding@1": "1.0.10",
     "jsr:@std/fs@1": "1.0.23",
     "jsr:@std/internal@^1.0.12": "1.0.12",
@@ -16,6 +17,9 @@
     },
     "@std/crypto@1.0.5": {
       "integrity": "0dcfbb319fe0bba1bd3af904ceb4f948cde1b92979ec1614528380ed308a3b40"
+    },
+    "@std/dotenv@0.225.6": {
+      "integrity": "1d6f9db72f565bd26790fa034c26e45ecb260b5245417be76c2279e5734c421b"
     },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"

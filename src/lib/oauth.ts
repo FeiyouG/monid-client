@@ -101,6 +101,11 @@ export async function startCallbackServer(): Promise<{ port: number, promise: Pr
   });
 
   const abortController = new AbortController();
+  const shutdownServerSoon = () => {
+    // Give the browser a brief moment to fully receive/render the response
+    // before shutting down the local callback server.
+    setTimeout(() => abortController.abort(), 250);
+  };
   
   const handler = (req: Request): Response => {
     const url = new URL(req.url);
@@ -111,7 +116,7 @@ export async function startCallbackServer(): Promise<{ port: number, promise: Pr
       
       if (error) {
         rejectCode(new Error(`OAuth error: ${error}`));
-        abortController.abort();
+        shutdownServerSoon();
         return new Response("Authentication failed. You can close this window.", {
           headers: { "Content-Type": "text/html" },
         });
@@ -119,13 +124,13 @@ export async function startCallbackServer(): Promise<{ port: number, promise: Pr
       
       if (code) {
         resolveCode(code);
-        abortController.abort();
+        shutdownServerSoon();
         return new Response(`
           <!DOCTYPE html>
           <html>
-            <head><title>Authentication Successful</title></head>
+            <title>Authentication Successful</title>
             <body>
-              <h1>✓ Authentication successful!</h1>
+              <h1>ScopeOS Authentication successful!</h1>
               <p>You can close this window and return to the CLI.</p>
             </body>
           </html>
