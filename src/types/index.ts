@@ -12,7 +12,8 @@ export interface Config {
 
 export interface WorkspaceConfig {
   id: string;
-  name: string;
+  slug: string;
+  name?: string;
 }
 
 export interface KeyConfig {
@@ -44,6 +45,22 @@ export interface WhoAmIResponse {
   workspace_id: string;
   workspace_name: string;
   email: string;
+}
+
+export interface WorkspaceSummary {
+  workspaceId: string;
+  slug: string;
+}
+
+export interface WorkspacesResponse {
+  workspaces: WorkspaceSummary[];
+}
+
+export interface UserInfo {
+  sub: string;  // User ID
+  email: string;
+  email_verified?: boolean;
+  name?: string;
 }
 
 export interface ParsedArgs {

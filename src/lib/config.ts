@@ -9,7 +9,7 @@ import { ensureDir, exists } from "@std/fs";
 import type { Config } from "../types/index.ts";
 
 const HOME_DIR = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-const CONFIG_DIR = join(HOME_DIR, ".scopeos-cli");
+const CONFIG_DIR = join(HOME_DIR, ".scopeos");
 const CONFIG_FILE = join(CONFIG_DIR, "config.yaml");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials");
 const KEYS_DIR = join(CONFIG_DIR, "keys");

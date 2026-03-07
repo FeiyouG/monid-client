@@ -7,6 +7,7 @@ import type { ParsedArgs } from "../types/index.ts";
 import type { VerificationKey, VerificationKeyCreate } from "../types/verification-key.ts";
 import { loadConfig, saveConfig, getKeysDir } from "../lib/config.ts";
 import { getAccessToken } from "../lib/credentials.ts";
+import { ensureWorkspaceSelected } from "../lib/workspace.ts";
 import {
   generateEd25519KeyPair,
   exportKeyPair,
@@ -49,14 +50,22 @@ async function keysGenerate(args: ParsedArgs): Promise<void> {
       Deno.exit(1);
     }
     
-    // Load config
-    const config = await loadConfig();
-    if (!config || !config.workspace) {
-      error("Not authenticated. Run 'scopeos-cli auth login' first.");
+    // Get access token first
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      error("Authentication expired. Please run 'scopeos-cli auth login' first.");
       Deno.exit(1);
     }
     
-    const workspaceId = config.workspace.id;
+    // Ensure workspace is selected (will prompt if not)
+    const workspaceId = await ensureWorkspaceSelected(accessToken);
+    
+    // Reload config after workspace selection
+    const config = await loadConfig();
+    if (!config) {
+      error("Configuration error. Please run 'scopeos-cli auth login' first.");
+      Deno.exit(1);
+    }
     
     info("Generating Ed25519 key pair...");
     
@@ -89,23 +98,17 @@ async function keysGenerate(args: ParsedArgs): Promise<void> {
     // Register with backend
     info("Registering public key with backend...");
     
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      error("Authentication expired. Please run 'scopeos-cli auth login' first.");
-      Deno.exit(1);
-    }
-    
     const keyCreate: VerificationKeyCreate = {
       workspaceId,
       createdBy: config.auth?.user_id || "unknown",
       publicKey: publicKeyFormatted,
       fingerprint,
       label,
-      algorithm: "Ed25519",
+      algorithm: "ED25519",
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
     };
     
-    const registeredKey = await registerKey(accessToken, keyCreate);
+    const registeredKey = await registerKey(accessToken, workspaceId, keyCreate);
     
     // Add key to config
     config.keys.push({
@@ -271,7 +274,7 @@ async function keysDelete(args: ParsedArgs): Promise<void> {
   }
 }
 
-async function registerKey(accessToken: string, keyCreate: VerificationKeyCreate): Promise<VerificationKey> {
+async function registerKey(accessToken: string, workspaceId: string, keyCreate: VerificationKeyCreate): Promise<VerificationKey> {
   const url = `${BUILD_CONFIG.api.endpoint}/v1/verification-keys`;
   
   const response = await fetch(url, {
@@ -279,6 +282,7 @@ async function registerKey(accessToken: string, keyCreate: VerificationKeyCreate
     headers: {
       "Authorization": `Bearer ${accessToken}`,
       "Content-Type": "application/json",
+      "x-workspace-id": workspaceId,
     },
     body: JSON.stringify(keyCreate),
   });

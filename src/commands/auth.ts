@@ -10,11 +10,11 @@ import {
   buildAuthorizationUrl,
   startCallbackServer,
   exchangeCodeForToken,
-  decodeJWT,
 } from "../lib/oauth.ts";
 import { openBrowser } from "../utils/browser.ts";
 import { success, error, info, box } from "../utils/display.ts";
-import type { ParsedArgs, WhoAmIResponse } from "../types/index.ts";
+import { ensureWorkspaceSelected } from "../lib/workspace.ts";
+import type { ParsedArgs, WhoAmIResponse, UserInfo } from "../types/index.ts";
 
 export async function authCommand(subcommand: string, args: ParsedArgs): Promise<void> {
   switch (subcommand) {
@@ -63,36 +63,30 @@ async function authLogin(args: ParsedArgs): Promise<void> {
     // Save credentials
     await saveCredentials(tokens);
     
-    // Decode ID token to get user info
-    let userEmail = "unknown";
-    if (tokens.id_token) {
-      const decoded = decodeJWT(tokens.id_token);
-      userEmail = (decoded.email as string) || (decoded.sub as string) || "unknown";
-    }
+    // Ensure workspace is selected
+    const workspaceId = await ensureWorkspaceSelected(tokens.access_token);
     
-    // Fetch workspace info from backend
-    info("Fetching workspace information...");
-    const whoami = await fetchWhoAmI(tokens.access_token);
+    // Fetch user info from OAuth userinfo endpoint
+    info("Fetching user information...");
+    const userInfo = await fetchUserInfo(tokens.access_token);
     
-    // Load or create config
-    let config = await loadConfig() || createDefaultConfig();
+    // Load config (should exist now after ensureWorkspaceSelected)
+    const config = await loadConfig() || createDefaultConfig();
     
-    // Update config
-    config.workspace = {
-      id: whoami.workspace_id,
-      name: whoami.workspace_name,
-    };
+    // Update auth info
     config.auth = {
       last_login: new Date().toISOString(),
-      user_email: whoami.email,
-      user_id: whoami.user_id,
+      user_email: userInfo.email,
+      user_id: userInfo.sub,
     };
     
     await saveConfig(config);
     
     console.log("");
-    success(`Authenticated as ${whoami.email}`);
-    success(`Workspace: ${whoami.workspace_name} (${whoami.workspace_id})`);
+    success(`Authenticated as ${userInfo.email}`);
+    if (config.workspace) {
+      success(`Workspace: ${config.workspace.slug} (${config.workspace.id})`);
+    }
     console.log("");
     
     // Prompt to generate keys
@@ -127,7 +121,8 @@ async function authWhoami(args: ParsedArgs): Promise<void> {
     console.log("");
     console.log(`Email: ${config.auth?.user_email || "unknown"}`);
     console.log(`User ID: ${config.auth?.user_id || "unknown"}`);
-    console.log(`Workspace: ${config.workspace.name}`);
+    const workspaceLabel = config.workspace.slug || config.workspace.name || "unknown";
+    console.log(`Workspace: ${workspaceLabel} (${config.workspace.id})`);
     console.log(`Workspace ID: ${config.workspace.id}`);
     console.log(`Last login: ${config.auth?.last_login || "unknown"}`);
     
@@ -152,22 +147,21 @@ async function authWhoami(args: ParsedArgs): Promise<void> {
   }
 }
 
-async function fetchWhoAmI(accessToken: string): Promise<WhoAmIResponse> {
-  const url = `${BUILD_CONFIG.api.endpoint}/v1/auth/whoami`;
+async function fetchUserInfo(accessToken: string): Promise<UserInfo> {
+  const url = `https://${BUILD_CONFIG.oauth.domain}/oauth/userinfo`;
   
   const response = await fetch(url, {
     method: "GET",
     headers: {
       "Authorization": `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
     },
   });
   
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Failed to fetch workspace info: ${response.status} ${errorText}`);
+    throw new Error(`Failed to fetch user info: ${response.status} ${errorText}`);
   }
   
-  const data: WhoAmIResponse = await response.json();
+  const data: UserInfo = await response.json();
   return data;
 }
