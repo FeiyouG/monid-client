@@ -1,35 +1,38 @@
 #!/bin/bash
 
 # Build script for ScopeOS CLI
-# Compiles Deno binary with embedded environment configuration
+# Generates static configuration and compiles Deno binary with baked-in environment variables
 
 set -e
 
 echo "Building ScopeOS CLI..."
 
-# Load environment variables from .env if it exists
+# Step 1: Load environment variables from .env if it exists (for local development)
+# In CI/CD, environment variables will already be set by the CI/CD provider
 if [ -f .env ]; then
   export $(cat .env | grep -v '^#' | xargs)
   echo "✓ Loaded configuration from .env"
-else
-  echo "⚠ Warning: .env file not found, using defaults"
 fi
 
-# Create dist directory
+# Step 2: Generate static build configuration from environment variables
+echo "Generating build configuration..."
+deno run --allow-env --allow-read --allow-write scripts/generate-config.ts
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Failed to generate build configuration"
+  echo "Please ensure all required environment variables are set."
+  exit 1
+fi
+
+# Step 3: Create dist directory
+echo ""
 mkdir -p dist
 
-# Show configuration
-echo ""
-echo "Build Configuration:"
-echo "  OAuth Domain: ${OAUTH_DOMAIN:-not set}"
-echo "  OAuth Client ID: ${OAUTH_CLIENT_ID:-not set}"
-echo "  API Endpoint: ${API_ENDPOINT:-not set}"
-echo "  Proxy Endpoint: ${PROXY_ENDPOINT:-not set}"
-echo ""
-
-# Compile for current platform
+# Step 4: Compile binary with baked-in configuration
 echo "Compiling for current platform..."
 deno compile \
+  --no-check \
   --allow-net \
   --allow-read \
   --allow-write \
@@ -40,6 +43,7 @@ deno compile \
 
 echo ""
 echo "✓ Build complete: ./dist/scopeos-cli"
+echo "✓ Configuration baked into binary"
 echo ""
-echo "To build for all platforms, run:"
-echo "  ./build-all.sh"
+echo "The binary now contains immutable configuration values."
+echo "It can be distributed and run without the .env file."

@@ -2,6 +2,9 @@
 .env*
 !.env.template
 
+# Generated build configuration (contains environment-specific values)
+src/config/build-config.ts
+
 # Build output
 dist/
 

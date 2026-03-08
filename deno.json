@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run main.ts",
+    "dev": "deno run --allow-env --allow-read --allow-write scripts/generate-config.ts && deno run --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run main.ts",
     "build": "deno task build:all",
     "build:all": "bash build.sh",
     "test": "deno test --allow-net --allow-read --allow-write --allow-env"
