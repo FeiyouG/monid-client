@@ -16,7 +16,7 @@ import {
   generateSystemPassword,
 } from "../lib/crypto.ts";
 import { generateFingerprint, formatPublicKey } from "../utils/fingerprint.ts";
-import { success, error, info, box, table } from "../utils/display.ts";
+import { success, error, info, box, table, confirm } from "../utils/display.ts";
 import { BUILD_CONFIG } from "../config/build-config.ts";
 
 export async function keysCommand(subcommand: string, args: ParsedArgs): Promise<void> {
@@ -33,20 +33,27 @@ export async function keysCommand(subcommand: string, args: ParsedArgs): Promise
     case "delete":
       await keysDelete(args);
       break;
+    case "rename":
+      await keysRename(args);
+      break;
+    case "revoke":
+      await keysRevoke(args);
+      break;
     default:
       console.error(`Unknown keys subcommand: ${subcommand}`);
-      console.log("Available: generate, list, activate, delete");
+      console.log("Available: generate, list, activate, delete, rename, revoke");
       Deno.exit(1);
   }
 }
 
 async function keysGenerate(args: ParsedArgs): Promise<void> {
   try {
-    const label = args.label as string | undefined;
+    // Accept label as positional argument (args._[2]) or --label flag
+    const label = (args._[2] as string | undefined) || (args.label as string | undefined);
     
     if (!label) {
-      error("Please provide a key label with --label");
-      console.log("Example: scopeos-cli keys generate --label my-production-key");
+      error("Please provide a key label");
+      console.log("Example: scopeos-cli keys generate my-production-key");
       Deno.exit(1);
     }
     
@@ -64,6 +71,14 @@ async function keysGenerate(args: ParsedArgs): Promise<void> {
     const config = await loadConfig();
     if (!config) {
       error("Configuration error. Please run 'scopeos-cli auth login' first.");
+      Deno.exit(1);
+    }
+    
+    // Check for label collision
+    const existingKey = config.keys.find(k => k.label === label);
+    if (existingKey) {
+      error(`Key with label '${label}' already exists.`);
+      console.log("Use 'scopeos-cli keys list' to see existing keys or 'scopeos-cli keys rename' to rename an existing key.");
       Deno.exit(1);
     }
     
@@ -116,7 +131,6 @@ async function keysGenerate(args: ParsedArgs): Promise<void> {
       label: registeredKey.label,
       fingerprint: registeredKey.fingerprint,
       algorithm: registeredKey.algorithm,
-      status: registeredKey.status,
       created_at: registeredKey.createdAt,
       expires_at: registeredKey.expiresAt,
     });
@@ -162,12 +176,11 @@ async function keysList(_args: ParsedArgs): Promise<void> {
       return;
     }
     
-    const headers = ["LABEL", "KEY ID", "FINGERPRINT", "STATUS", "EXPIRES"];
+    const headers = ["LABEL", "KEY ID", "FINGERPRINT", "EXPIRES"];
     const rows = config.keys.map(key => [
       key.label + (key.label === config.activated_key ? " *" : ""),
       key.key_id.substring(0, 12) + "...",
       key.fingerprint.substring(0, 30) + "...",
-      key.status,
       key.expires_at ? new Date(key.expires_at).toLocaleDateString() : "Never",
     ]);
     
@@ -185,7 +198,7 @@ async function keysList(_args: ParsedArgs): Promise<void> {
 
 async function keysActivate(args: ParsedArgs): Promise<void> {
   try {
-    const label = args._[0] as string | undefined;
+    const label = args._[2] as string | undefined;
     
     if (!label) {
       error("Please provide a key label");
@@ -219,7 +232,7 @@ async function keysActivate(args: ParsedArgs): Promise<void> {
 
 async function keysDelete(args: ParsedArgs): Promise<void> {
   try {
-    const label = args._[0] as string | undefined;
+    const label = args._[2] as string | undefined;
     
     if (!label) {
       error("Please provide a key label");
@@ -240,6 +253,17 @@ async function keysDelete(args: ParsedArgs): Promise<void> {
     if (keyIndex === -1) {
       error(`Key '${label}' not found`);
       Deno.exit(1);
+    }
+    
+    // Ask for confirmation
+    const confirmed = await confirm(
+      `Delete key '${label}'? This cannot be undone.`,
+      args.yes as boolean || false
+    );
+    
+    if (!confirmed) {
+      info("Delete cancelled");
+      return;
     }
     
     config.keys.splice(keyIndex, 1);
@@ -270,6 +294,147 @@ async function keysDelete(args: ParsedArgs): Promise<void> {
     
   } catch (err) {
     error(`Failed to delete key: ${err instanceof Error ? err.message : String(err)}`);
+    throw err;
+  }
+}
+
+async function keysRename(args: ParsedArgs): Promise<void> {
+  try {
+    const oldLabel = args._[2] as string | undefined;
+    const newLabel = args._[3] as string | undefined;
+    
+    if (!oldLabel || !newLabel) {
+      error("Please provide both old and new key labels");
+      console.log("Example: scopeos-cli keys rename my-old-key my-new-key");
+      Deno.exit(1);
+    }
+    
+    const config = await loadConfig();
+    if (!config || !config.workspace) {
+      error("Not authenticated. Run 'scopeos-cli auth login' first.");
+      Deno.exit(1);
+    }
+    
+    const workspaceId = config.workspace.id;
+    
+    // Check if old label exists
+    const keyIndex = config.keys.findIndex(k => k.label === oldLabel);
+    if (keyIndex === -1) {
+      error(`Key '${oldLabel}' not found`);
+      Deno.exit(1);
+    }
+    
+    // Check if new label already exists (collision check)
+    const newLabelExists = config.keys.some(k => k.label === newLabel);
+    if (newLabelExists) {
+      error(`Key with label '${newLabel}' already exists`);
+      console.log("Use 'scopeos-cli keys list' to see existing keys.");
+      Deno.exit(1);
+    }
+    
+    // Update the key label in config
+    config.keys[keyIndex].label = newLabel;
+    
+    // Update activated_key if it matches old label
+    if (config.activated_key === oldLabel) {
+      config.activated_key = newLabel;
+    }
+    
+    await saveConfig(config);
+    
+    // Rename the key file
+    try {
+      const keysDir = await getKeysDir(workspaceId);
+      const oldKeyPath = join(keysDir, oldLabel);
+      const newKeyPath = join(keysDir, newLabel);
+      await Deno.rename(oldKeyPath, newKeyPath);
+    } catch (renameErr) {
+      error(`Failed to rename key file: ${renameErr instanceof Error ? renameErr.message : String(renameErr)}`);
+      // Revert config changes
+      config.keys[keyIndex].label = oldLabel;
+      if (config.activated_key === newLabel) {
+        config.activated_key = oldLabel;
+      }
+      await saveConfig(config);
+      throw renameErr;
+    }
+    
+    success(`Renamed key from '${oldLabel}' to '${newLabel}'`);
+    
+    if (config.activated_key === newLabel) {
+      info("This is currently the active key");
+    }
+    
+  } catch (err) {
+    error(`Failed to rename key: ${err instanceof Error ? err.message : String(err)}`);
+    throw err;
+  }
+}
+
+async function keysRevoke(args: ParsedArgs): Promise<void> {
+  try {
+    const label = args._[2] as string | undefined;
+    
+    if (!label) {
+      error("Please provide a key label");
+      console.log("Example: scopeos-cli keys revoke my-key");
+      Deno.exit(1);
+    }
+    
+    const config = await loadConfig();
+    if (!config || !config.workspace) {
+      error("Not authenticated. Run 'scopeos-cli auth login' first.");
+      Deno.exit(1);
+    }
+    
+    // Find the key
+    const key = config.keys.find(k => k.label === label);
+    if (!key) {
+      error(`Key '${label}' not found`);
+      Deno.exit(1);
+    }
+    
+    // Get access token
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      error("Authentication expired. Please run 'scopeos-cli auth login' first.");
+      Deno.exit(1);
+    }
+    
+    // Ask for confirmation
+    const confirmed = await confirm(
+      `Revoke key '${label}' on the server? This cannot be undone.`,
+      args.yes as boolean || false
+    );
+    
+    if (!confirmed) {
+      info("Revoke cancelled");
+      return;
+    }
+    
+    info("Revoking key on server...");
+    
+    // Call revoke API
+    const url = `${BUILD_CONFIG.api.endpoint}/v1/verification-keys/${key.key_id}/revoke`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "x-workspace-id": config.workspace.id,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to revoke key: ${response.status} ${errorText}`);
+    }
+    
+    success(`Key '${label}' has been revoked on the server`);
+    info("The key remains in local config. Use 'keys delete' to remove it locally.");
+    
+  } catch (err) {
+    error(`Failed to revoke key: ${err instanceof Error ? err.message : String(err)}`);
     throw err;
   }
 }

@@ -22,7 +22,6 @@ export const BUILD_CONFIG = {
   },
   api: {
     endpoint: Deno.env.get("API_ENDPOINT") || "https://api.scopeos.xyz",
-    proxyEndpoint: Deno.env.get("PROXY_ENDPOINT") || "https://proxy.scopeos.xyz",
     dashboardUrl: Deno.env.get("DASHBOARD_URL") || "https://scopeos.xyz",
   },
 } as const;

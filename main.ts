@@ -3,7 +3,6 @@
 import { parseArgs } from "@std/cli/parse-args";
 import { authCommand } from "./src/commands/auth.ts";
 import { keysCommand } from "./src/commands/keys.ts";
-import { proxyCommand } from "./src/commands/proxy.ts";
 
 const VERSION = "0.1.0";
 
@@ -18,34 +17,38 @@ Commands:
   auth logout             Clear local credentials
   auth whoami             Show current user and workspace info
   
-  keys generate           Generate and register a new key pair
+  keys generate <label>   Generate and register a new key pair
   keys list               List all keys for current workspace
   keys activate <label>   Set the active key for signing requests
   keys delete <label>     Delete a local key
-  
-  proxy <slug> <target>   Make a signed API request through proxy
+  keys rename <old> <new> Rename a key label
+  keys revoke <label>     Revoke a key on the server
   
 Options:
   --help, -h              Show this help message
   --version, -v           Show version information
   --verbose               Show detailed output
+  --yes, -y               Skip confirmation prompts
 
 Examples:
   scopeos-cli auth login
-  scopeos-cli keys generate --label "my-key"
-  scopeos-cli proxy my-api /users
-  scopeos-cli proxy my-api /users --method POST --data '{"name":"Alice"}'
+  scopeos-cli keys generate my-key
+  scopeos-cli keys activate my-key
+  scopeos-cli keys rename old-key new-key
+  scopeos-cli keys revoke my-key
+  scopeos-cli auth logout -y
 `);
 }
 
 async function main() {
   const args = parseArgs(Deno.args, {
-    boolean: ["help", "version", "verbose"],
+    boolean: ["help", "version", "verbose", "yes"],
     string: ["label", "method", "data", "key", "header", "output"],
     collect: ["header"],
     alias: {
       h: "help",
       v: "version",
+      y: "yes",
     },
   });
 
@@ -66,11 +69,6 @@ async function main() {
       await authCommand(subcommand as string, args);
     } else if (command === "keys") {
       await keysCommand(subcommand as string, args);
-    } else if (command === "proxy") {
-      // proxy <slug> <target>
-      const slug = subcommand as string;
-      const target = rest[0] as string;
-      await proxyCommand(slug, target, args);
     } else {
       console.error(`Unknown command: ${command}`);
       console.log("Run 'scopeos-cli --help' for usage information");

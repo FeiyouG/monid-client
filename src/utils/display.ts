@@ -52,3 +52,19 @@ export function table(headers: string[], rows: string[][]): void {
     console.log(rowStr);
   }
 }
+
+export async function confirm(message: string, skipConfirm: boolean = false): Promise<boolean> {
+  if (skipConfirm) return true;
+  
+  // Write prompt to stdout
+  const encoder = new TextEncoder();
+  await Deno.stdout.write(encoder.encode(`${message} (y/N): `));
+  
+  // Read user input
+  const buf = new Uint8Array(1024);
+  const n = await Deno.stdin.read(buf);
+  if (n === null) return false;
+  
+  const answer = new TextDecoder().decode(buf.subarray(0, n)).trim().toLowerCase();
+  return answer === 'y' || answer === 'yes';
+}

@@ -83,6 +83,16 @@ export async function deleteConfig(): Promise<void> {
   }
 }
 
+export async function deleteCredentials(): Promise<void> {
+  try {
+    if (await exists(CREDENTIALS_FILE)) {
+      await Deno.remove(CREDENTIALS_FILE);
+    }
+  } catch (error) {
+    throw new Error(`Failed to delete credentials: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export function createDefaultConfig(): Config {
   return {
     version: "1.0",

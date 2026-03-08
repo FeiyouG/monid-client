@@ -21,7 +21,6 @@ export interface KeyConfig {
   label: string;
   fingerprint: string;
   algorithm: string;
-  status: string;
   created_at: string;
   expires_at?: string;
 }
@@ -67,6 +66,7 @@ export interface ParsedArgs {
   _: (string | number)[];
   [key: string]: unknown;
   verbose?: boolean;
+  yes?: boolean;
   label?: string;
   method?: string;
   data?: string;
