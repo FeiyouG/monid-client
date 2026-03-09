@@ -14,11 +14,54 @@ A secure command-line interface for ScopeOS with OAuth authentication, Ed25519 k
 
 ## Installation
 
-### Prerequisites
+### via npm (Recommended)
 
-- [Deno](https://deno.land/) installed on your system
+The easiest way to install ScopeOS CLI:
 
-### Option 1: Run from source
+```bash
+npm install -g @yourorg/scopeos-cli
+```
+
+For development builds:
+```bash
+npm install -g @yourorg-dev/scopeos-cli@dev
+```
+
+**Requirements**: Node.js 16.0.0 or higher
+
+### Direct Binary Download
+
+Download pre-compiled binaries for your platform:
+
+**Linux x86_64:**
+```bash
+curl -LO https://gitlab.com/yourorg/scopeos-cli/-/releases/latest/downloads/scopeos-cli-linux-x64
+chmod +x scopeos-cli-linux-x64
+sudo mv scopeos-cli-linux-x64 /usr/local/bin/scopeos-cli
+```
+
+**macOS ARM64 (M1/M2/M3):**
+```bash
+curl -LO https://gitlab.com/yourorg/scopeos-cli/-/releases/latest/downloads/scopeos-cli-macos-arm64
+chmod +x scopeos-cli-macos-arm64
+sudo mv scopeos-cli-macos-arm64 /usr/local/bin/scopeos-cli
+```
+
+**Windows x86_64:**
+Download from [GitLab Releases](https://gitlab.com/yourorg/scopeos-cli/-/releases/latest)
+
+### Verify Installation
+
+```bash
+scopeos-cli --version
+scopeos-cli --help
+```
+
+**For detailed installation instructions and troubleshooting, see [DISTRIBUTION.md](DISTRIBUTION.md).**
+
+### For Developers: Build from Source
+
+**Prerequisites**: [Deno](https://deno.land/) 2.x
 
 ```bash
 # Clone the repository
@@ -26,25 +69,11 @@ git clone <repository-url>
 cd agenticPayment-cli
 
 # Run directly
-deno run --allow-net --allow-read --allow-write --allow-env --allow-run main.ts --help
-```
+deno task dev
 
-### Option 2: Build and install binary
-
-```bash
-# Create .env file with your configuration
-cp .env.example .env
-# Edit .env with your OAuth and API settings
-
-# Build
+# Or build binary
 ./build.sh
-
-# The binary will be in ./dist/scopeos-cli
-# Move it to your PATH
-sudo mv ./dist/scopeos-cli /usr/local/bin/
-
-# Or create an alias
-alias scopeos-cli="./dist/scopeos-cli"
+# Binary will be in ./dist/scopeos-cli
 ```
 
 ## Configuration

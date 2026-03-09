@@ -1,0 +1,381 @@
+# GitLab CI/CD Pipeline for ScopeOS CLI
+# Multi-platform binary builds with environment-specific configuration
+# Inspired by Skill Lab workflow patterns
+
+# Pipeline stages
+stages:
+  - build      # Build binaries for all platforms (includes config generation)
+  - package    # Create npm package with platform-specific binaries
+  - publish    # Publish to npm registry
+
+# Global variables
+variables:
+  DENO_DIR: .deno_cache
+  ARTIFACT_DIR: dist/binaries
+
+# Cache Deno dependencies for faster builds
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .deno_cache
+
+# ============================================================================
+# HIDDEN JOB TEMPLATES (DRY - Don't Repeat Yourself)
+# ============================================================================
+
+# Base template for all build jobs
+.build_template:
+  stage: build
+  image: denoland/deno:latest
+  before_script:
+    # Generate environment-specific configuration
+    - echo "Generating configuration for environment: $CI_ENVIRONMENT_NAME"
+    - deno run --allow-env --allow-read --allow-write scripts/generate-config.ts
+    - echo "✓ Config generated"
+    - cat src/config/build-config.ts
+  script:
+    - echo "Building for target: $DENO_TARGET"
+    - mkdir -p $ARTIFACT_DIR
+    - >
+      deno compile
+      --no-check
+      --target $DENO_TARGET
+      --allow-net
+      --allow-read
+      --allow-write
+      --allow-env
+      --allow-run
+      --output $ARTIFACT_DIR/$BINARY_NAME
+      main.ts
+    - ls -lh $ARTIFACT_DIR/$BINARY_NAME
+    - echo "✓ Binary built successfully: $BINARY_NAME"
+  artifacts:
+    paths:
+      - $ARTIFACT_DIR/$BINARY_NAME
+    expire_in: 1 day
+
+# Template for development builds (main branch)
+.build_dev:
+  extends: .build_template
+  environment:
+    name: development
+  only:
+    - main
+
+# Template for production builds (version tags)
+.build_prod:
+  extends: .build_template
+  environment:
+    name: production
+  only:
+    - tags
+    - /^v\d+\.\d+\.\d+$/
+
+# ============================================================================
+# BUILD STAGE - Development Builds (main branch)
+# ============================================================================
+
+build:dev:linux-x64:
+  extends: .build_dev
+  variables:
+    DENO_TARGET: "x86_64-unknown-linux-gnu"
+    BINARY_NAME: "scopeos-cli-linux-x64"
+
+build:dev:linux-arm64:
+  extends: .build_dev
+  variables:
+    DENO_TARGET: "aarch64-unknown-linux-gnu"
+    BINARY_NAME: "scopeos-cli-linux-arm64"
+
+build:dev:macos-x64:
+  extends: .build_dev
+  variables:
+    DENO_TARGET: "x86_64-apple-darwin"
+    BINARY_NAME: "scopeos-cli-macos-x64"
+
+build:dev:macos-arm64:
+  extends: .build_dev
+  variables:
+    DENO_TARGET: "aarch64-apple-darwin"
+    BINARY_NAME: "scopeos-cli-macos-arm64"
+
+build:dev:windows-x64:
+  extends: .build_dev
+  variables:
+    DENO_TARGET: "x86_64-pc-windows-msvc"
+    BINARY_NAME: "scopeos-cli-windows-x64.exe"
+
+# ============================================================================
+# BUILD STAGE - Production Builds (version tags)
+# ============================================================================
+
+build:prod:linux-x64:
+  extends: .build_prod
+  variables:
+    DENO_TARGET: "x86_64-unknown-linux-gnu"
+    BINARY_NAME: "scopeos-cli-linux-x64"
+
+build:prod:linux-arm64:
+  extends: .build_prod
+  variables:
+    DENO_TARGET: "aarch64-unknown-linux-gnu"
+    BINARY_NAME: "scopeos-cli-linux-arm64"
+
+build:prod:macos-x64:
+  extends: .build_prod
+  variables:
+    DENO_TARGET: "x86_64-apple-darwin"
+    BINARY_NAME: "scopeos-cli-macos-x64"
+
+build:prod:macos-arm64:
+  extends: .build_prod
+  variables:
+    DENO_TARGET: "aarch64-apple-darwin"
+    BINARY_NAME: "scopeos-cli-macos-arm64"
+
+build:prod:windows-x64:
+  extends: .build_prod
+  variables:
+    DENO_TARGET: "x86_64-pc-windows-msvc"
+    BINARY_NAME: "scopeos-cli-windows-x64.exe"
+
+# ============================================================================
+# PACKAGE STAGE - Create npm package
+# ============================================================================
+
+# Package for development (main branch)
+package:npm:dev:
+  stage: package
+  image: denoland/deno:latest
+  dependencies:
+    - build:dev:linux-x64
+    - build:dev:linux-arm64
+    - build:dev:macos-x64
+    - build:dev:macos-arm64
+    - build:dev:windows-x64
+  only:
+    - main
+  before_script:
+    # Install Node.js for npm commands
+    - apt-get update && apt-get install -y nodejs npm
+  script:
+    - echo "Creating npm package for development..."
+    - ls -lh $ARTIFACT_DIR/
+    - deno run --allow-read --allow-write --allow-env --allow-run scripts/build-npm-package.ts
+    - echo "Generating checksums..."
+    - deno run --allow-read --allow-write scripts/build-checksums.ts
+    - echo "✓ npm package created"
+    - ls -la npm/
+    - cat checksums.txt
+  artifacts:
+    paths:
+      - npm/
+      - checksums.txt
+    expire_in: 1 day
+
+# Package for production (version tags)
+package:npm:prod:
+  stage: package
+  image: denoland/deno:latest
+  dependencies:
+    - build:prod:linux-x64
+    - build:prod:linux-arm64
+    - build:prod:macos-x64
+    - build:prod:macos-arm64
+    - build:prod:windows-x64
+  only:
+    - tags
+    - /^v\d+\.\d+\.\d+$/
+  before_script:
+    # Install Node.js for npm commands
+    - apt-get update && apt-get install -y nodejs npm
+  script:
+    - echo "Creating npm package for production..."
+    - ls -lh $ARTIFACT_DIR/
+    - deno run --allow-read --allow-write --allow-env --allow-run scripts/build-npm-package.ts
+    - echo "Generating checksums..."
+    - deno run --allow-read --allow-write scripts/build-checksums.ts
+    - echo "✓ npm package created"
+    - ls -la npm/
+    - cat checksums.txt
+  artifacts:
+    paths:
+      - npm/
+      - checksums.txt
+    expire_in: 30 days
+
+# ============================================================================
+# PUBLISH STAGE - Publish to npm registry
+# ============================================================================
+
+# Publish to development npm scope (main branch)
+publish:npm:dev:
+  stage: publish
+  image: node:20
+  dependencies:
+    - package:npm:dev
+  environment:
+    name: development
+  only:
+    - main
+  before_script:
+    # Configure npm authentication
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+  script:
+    - echo "Publishing to development npm scope..."
+    - echo "Package: ${NPM_SCOPE}/scopeos-cli"
+    - cd npm
+    - npm publish --tag dev --access public
+    - echo "✓ Published to npm with 'dev' tag"
+    - echo ""
+    - echo "Install with:"
+    - echo "  npm install -g ${NPM_SCOPE}/scopeos-cli@dev"
+  after_script:
+    - rm -f .npmrc
+
+# Publish to production npm scope (version tags)
+publish:npm:prod:
+  stage: publish
+  image: node:20
+  dependencies:
+    - package:npm:prod
+  environment:
+    name: production
+    url: https://www.npmjs.com/package/${NPM_SCOPE}/scopeos-cli
+  only:
+    - tags
+    - /^v\d+\.\d+\.\d+$/
+  before_script:
+    # Configure npm authentication
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+  script:
+    - echo "Publishing to production npm scope..."
+    - echo "Package: ${NPM_SCOPE}/scopeos-cli"
+    - echo "Version: ${CI_COMMIT_TAG}"
+    - cd npm
+    - npm publish --access public
+    - echo "✓ Published to npm registry"
+    - echo ""
+    - echo "Install with:"
+    - echo "  npm install -g ${NPM_SCOPE}/scopeos-cli"
+    - echo ""
+    - echo "View at:"
+    - echo "  https://www.npmjs.com/package/${NPM_SCOPE}/scopeos-cli"
+  after_script:
+    - rm -f .npmrc
+
+# ============================================================================
+# OPTIONAL: GitLab Release Creation
+# ============================================================================
+
+# Create GitLab Release for development builds (optional)
+release:dev:
+  stage: publish
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  dependencies:
+    - package:npm:dev
+  only:
+    - main
+  script:
+    - echo "Creating development release..."
+    - |
+      cat > release_description.md <<EOF
+      # Development Build - ${CI_COMMIT_SHORT_SHA}
+
+      Automated development build from commit [${CI_COMMIT_SHA}](${CI_PROJECT_URL}/-/commit/${CI_COMMIT_SHA})
+
+      ## Installation
+
+      ### via npm (Recommended)
+
+      \`\`\`bash
+      npm install -g ${NPM_SCOPE}/scopeos-cli@dev
+      \`\`\`
+
+      ## Checksums
+
+      \`\`\`
+      $(cat checksums.txt)
+      \`\`\`
+      EOF
+  release:
+    name: "Dev Build ${CI_COMMIT_SHORT_SHA}"
+    description: ./release_description.md
+    tag_name: "dev-${CI_COMMIT_SHORT_SHA}"
+    ref: ${CI_COMMIT_SHA}
+
+# Create GitLab Release for production tags
+release:prod:
+  stage: publish
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  dependencies:
+    - package:npm:prod
+  only:
+    - tags
+    - /^v\d+\.\d+\.\d+$/
+  script:
+    - echo "Creating production release..."
+    - |
+      cat > release_description.md <<EOF
+      # Release ${CI_COMMIT_TAG}
+
+      ## Installation
+
+      ### via npm (Recommended)
+
+      \`\`\`bash
+      npm install -g ${NPM_SCOPE}/scopeos-cli
+      \`\`\`
+
+      ### Direct Binary Download
+
+      Download the binary for your platform:
+
+      - [Linux x64](${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/${ARTIFACT_DIR}/scopeos-cli-linux-x64?job=build:prod:linux-x64)
+      - [Linux ARM64](${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/${ARTIFACT_DIR}/scopeos-cli-linux-arm64?job=build:prod:linux-arm64)
+      - [macOS x64 (Intel)](${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/${ARTIFACT_DIR}/scopeos-cli-macos-x64?job=build:prod:macos-x64)
+      - [macOS ARM64 (Apple Silicon)](${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/${ARTIFACT_DIR}/scopeos-cli-macos-arm64?job=build:prod:macos-arm64)
+      - [Windows x64](${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/${ARTIFACT_DIR}/scopeos-cli-windows-x64.exe?job=build:prod:windows-x64)
+
+      ### Installation Instructions
+
+      **Linux/macOS:**
+
+      \`\`\`bash
+      # Download binary (example for Linux x64)
+      curl -LO ${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/${ARTIFACT_DIR}/scopeos-cli-linux-x64?job=build:prod:linux-x64
+      
+      # Make executable
+      chmod +x scopeos-cli-linux-x64
+      
+      # Move to PATH
+      sudo mv scopeos-cli-linux-x64 /usr/local/bin/scopeos-cli
+      \`\`\`
+
+      **Windows:**
+
+      Download the .exe file and add to your PATH.
+
+      ## Checksums (SHA256)
+
+      \`\`\`
+      $(cat checksums.txt)
+      \`\`\`
+
+      Verify your download:
+
+      \`\`\`bash
+      sha256sum scopeos-cli-*
+      \`\`\`
+
+      ## Documentation
+
+      - [Installation Guide](${CI_PROJECT_URL}/-/blob/${CI_COMMIT_TAG}/DISTRIBUTION.md)
+      - [Quick Start](${CI_PROJECT_URL}/-/blob/${CI_COMMIT_TAG}/QUICKSTART.md)
+      - [README](${CI_PROJECT_URL}/-/blob/${CI_COMMIT_TAG}/README.md)
+      EOF
+  release:
+    name: "Release ${CI_COMMIT_TAG}"
+    description: ./release_description.md
+    tag_name: ${CI_COMMIT_TAG}
+    ref: ${CI_COMMIT_SHA}

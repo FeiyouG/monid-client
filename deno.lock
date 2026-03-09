@@ -9,6 +9,7 @@
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/path@1": "1.1.4",
     "jsr:@std/path@^1.1.4": "1.1.4",
+    "jsr:@std/yaml@*": "1.0.12",
     "jsr:@std/yaml@1": "1.0.12"
   },
   "jsr": {
