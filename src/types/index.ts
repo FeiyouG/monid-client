@@ -20,6 +20,7 @@ export interface KeyConfig {
   key_id: string;
   label: string;
   fingerprint: string;
+  fingerprint_short?: string;  // 7-char hex short fingerprint for display
   algorithm: string;
   status: string;  // "ACTIVE" or "REVOKED"
   created_at: string;

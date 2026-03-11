@@ -16,7 +16,10 @@
     "@std/crypto": "jsr:@std/crypto@1",
     "@std/encoding": "jsr:@std/encoding@1",
     "@std/http": "jsr:@std/http@1",
-    "@std/fs": "jsr:@std/fs@1"
+    "@std/fs": "jsr:@std/fs@1",
+    "@cliffy/command": "jsr:@cliffy/command@^1.0.0",
+    "@cliffy/prompt": "jsr:@cliffy/prompt@^1.0.0",
+    "@cliffy/table": "jsr:@cliffy/table@^1.0.0"
   },
   "compilerOptions": {
     "lib": ["deno.window", "deno.unstable"]

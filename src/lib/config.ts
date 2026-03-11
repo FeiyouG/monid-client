@@ -7,6 +7,7 @@ import { parse, stringify } from "@std/yaml";
 import { join } from "@std/path";
 import { ensureDir, exists } from "@std/fs";
 import type { Config } from "../types/index.ts";
+import { getShortFingerprint } from "../utils/fingerprint.ts";
 
 const HOME_DIR = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
 const CONFIG_DIR = join(HOME_DIR, ".scopeos");
@@ -29,6 +30,21 @@ export async function loadConfig(): Promise<Config | null> {
   try {
     const content = await Deno.readTextFile(CONFIG_FILE);
     const config = parse(content) as Config;
+    
+    // Migration: add fingerprint_short to existing keys
+    if (config?.keys) {
+      let needsSave = false;
+      for (const key of config.keys) {
+        if (!key.fingerprint_short && key.fingerprint) {
+          key.fingerprint_short = getShortFingerprint(key.fingerprint);
+          needsSave = true;
+        }
+      }
+      if (needsSave) {
+        await saveConfig(config);
+      }
+    }
+    
     return config;
   } catch (error) {
     throw new Error(`Failed to load config: ${error instanceof Error ? error.message : String(error)}`);
