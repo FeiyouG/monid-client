@@ -73,4 +73,19 @@ export interface ParsedArgs {
   key?: string;
   header?: string[];
   output?: string;
+  outputSchema?: string;
+  inputSchema?: string;
+  capabilities?: string;
+  input?: string;
+  wait?: boolean;
+  limit?: number | string;
+  cursor?: string;
+  title?: string;
+  description?: string;
 }
+
+// Re-export all types
+export * from "./task.ts";
+export * from "./quote.ts";
+export * from "./search.ts";
+export * from "./verification-key.ts";

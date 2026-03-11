@@ -151,7 +151,95 @@ scopeos-cli keys delete my-old-key
 
 Deletes a key from local storage. Note: This doesn't revoke the key on the backend - use the dashboard for that.
 
-### Making API Requests
+### Task Management
+
+Tasks define reusable search templates with input/output schemas and capabilities.
+
+#### Create a task
+```bash
+scopeos-cli tasks create \
+  --title "Company Research" \
+  --description "Research company information from web sources" \
+  --input-schema '{"type":"object","properties":{"company":{"type":"string"}},"required":["company"]}' \
+  --output-schema '{"type":"object","properties":{"results":{"type":"array"}}}' \
+  --capabilities '[{"capabilityId":"apify.actor.website-scraper","prepareInput":{}}]'
+```
+
+Or use schema files:
+```bash
+scopeos-cli tasks create \
+  --title "Company Research" \
+  --description "Research companies" \
+  --input-schema ./schemas/input.json \
+  --output-schema ./schemas/output.json \
+  --capabilities ./capabilities.json
+```
+
+#### List tasks
+```bash
+scopeos-cli tasks list
+scopeos-cli tasks list --limit 20
+scopeos-cli tasks list --cursor <cursor-from-previous-page>
+```
+
+#### Get task details
+```bash
+scopeos-cli tasks get 01JBXX...
+```
+
+#### Update a task
+```bash
+scopeos-cli tasks update 01JBXX... --title "Updated Title"
+scopeos-cli tasks update 01JBXX... --description "New description" --input-schema input.json
+```
+
+#### Delete a task
+```bash
+scopeos-cli tasks delete 01JBXX...
+scopeos-cli tasks delete 01JBXX... -y  # Skip confirmation
+```
+
+### Price Quotes
+
+Get price quotes before executing searches.
+
+#### Create a quote
+```bash
+scopeos-cli quotes create 01JBXX... --input '{"company":"Acme Corp"}'
+scopeos-cli quotes create 01JBXX... --input input.json
+```
+
+The quote shows estimated pricing and expires after 1 hour (configurable).
+
+### Searches & Executions
+
+Execute searches using natural language queries or task-based workflows.
+
+#### Quick search (creates task, quote, and executes)
+```bash
+# Execute and return immediately
+scopeos-cli searches "Find information about Acme Corp"
+
+# Wait for completion and save results
+scopeos-cli searches "Research Tesla's latest products" --wait --output results.json
+
+# Custom output schema
+scopeos-cli searches "Company research" --output-schema schema.json --wait
+```
+
+#### Check execution status
+```bash
+scopeos-cli searches check 01JBXZ...
+scopeos-cli execution get 01JBXZ...
+scopeos-cli execution get 01JBXZ... --wait  # Poll until completion
+```
+
+#### Save results to file
+```bash
+scopeos-cli execution get 01JBXZ... --output results.json
+```
+
+### Making API Requests (Legacy Proxy)
 
 #### Basic GET request
 ```bash
@@ -321,7 +409,56 @@ Headers: Authorization: Bearer {access_token}
 Response: 204 No Content
 ```
 
-#### Proxy Endpoint
+#### Task Management
+```
+POST /v1/tasks
+Headers: X-Workspace-ID, Signature headers
+Body: TaskCreate
+Response: Task
+
+GET /v1/tasks?limit={n}&cursor={cursor}
+Headers: X-Workspace-ID, Signature headers
+Response: { items: Task[], cursor?: string }
+
+GET /v1/tasks/:taskId
+Headers: X-Workspace-ID, Signature headers
+Response: Task
+
+PATCH /v1/tasks/:taskId
+Headers: X-Workspace-ID, Signature headers
+Body: TaskUpdate (partial)
+Response: Task
+
+DELETE /v1/tasks/:taskId
+Headers: X-Workspace-ID, Signature headers
+Response: 204 No Content
+```
+
+#### Quotes
+```
+POST /v1/tasks/:taskId/quotes
+Headers: X-Workspace-ID, Signature headers
+Body: { input: Record<string, unknown> }
+Response: Quote
+
+GET /v1/tasks/:taskId/quotes/:quoteId
+Headers: X-Workspace-ID, Signature headers
+Response: Quote
+```
+
+#### Searches & Executions
+```
+POST /v1/searches
+Headers: X-Workspace-ID, Signature headers
+Body: { quoteId: string }
+Response: 202 Accepted { executionId, status, message }
+
+GET /v1/executions/:executionId
+Headers: X-Workspace-ID, Signature headers
+Response: Execution (with optional result envelope)
+```
+
+#### Proxy Endpoint (Legacy)
 ```
 ANY /v1/*
 Headers:
