@@ -11,21 +11,20 @@ export interface JSONSchema {
   [key: string]: unknown;
 }
 
-// Capability configuration for a task
-export interface TaskCapability {
-  capabilityId: string;
-  prepareInput: Record<string, unknown>;
-}
+// // Capability configuration for a task
+// export interface TaskCapability {
+//   capabilityId: string;
+//   prepareInput: Record<string, unknown>;
+// }
 
 // Full task object returned by API
 export interface Task {
   taskId: string;
   workspaceId: string;
-  title: string;
+  name: string;
   description: string;
-  inputSchema: JSONSchema;
+  query: string;
   outputSchema: JSONSchema;
-  capabilities: TaskCapability[];
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -33,22 +32,17 @@ export interface Task {
 
 // Payload for creating a new task
 export interface TaskCreate {
-  title: string;
+  name: string;
   description: string;
-  inputSchema: JSONSchema;
+  query: string;
   outputSchema: JSONSchema;
-  capabilities: TaskCapability[];
   metadata?: Record<string, unknown>;
 }
 
 // Payload for updating a task
 export interface TaskUpdate {
-  title?: string;
+  name?: string;
   description?: string;
-  inputSchema?: JSONSchema;
-  outputSchema?: JSONSchema;
-  capabilities?: TaskCapability[];
-  metadata?: Record<string, unknown>;
 }
 
 // Paginated list response

@@ -20,5 +20,5 @@ export async function generateFingerprint(publicKeyRaw: Uint8Array): Promise<str
 // Format public key for display (ed25519-{base64})
 export function formatPublicKey(publicKeyRaw: Uint8Array): string {
   const base64Key = encodeBase64(publicKeyRaw);
-  return `ed25519-${base64Key}`;
+  return base64Key;
 }

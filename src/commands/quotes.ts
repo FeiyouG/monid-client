@@ -22,7 +22,6 @@ export async function quotesCommand(subcommand: string, args: ParsedArgs): Promi
 async function quotesCreate(args: ParsedArgs): Promise<void> {
   try {
     const taskId = args._[2] as string | undefined;
-    const inputArg = args.input as string | undefined;
 
     if (!taskId) {
       error("Please provide a task ID");
@@ -30,21 +29,11 @@ async function quotesCreate(args: ParsedArgs): Promise<void> {
       Deno.exit(1);
     }
 
-    if (!inputArg) {
-      error("Please provide input data");
-      console.log("Example: scopeos-cli quotes create 01JBXX... --input '{\"query\":\"Acme Corp\"}'");
-      console.log("Or from file: scopeos-cli quotes create 01JBXX... --input input.json");
-      Deno.exit(1);
-    }
-
     info("Creating quote...");
-
-    // Parse input data
-    const inputData = await parseInputData(inputArg);
 
     // Create quote
     const quoteCreate: QuoteCreate = {
-      input: inputData,
+      taskId: taskId
     };
 
     const quote = await apiPost<Quote>(`/v1/tasks/${taskId}/quotes`, quoteCreate);
@@ -87,28 +76,13 @@ async function parseInputData(input: string): Promise<Record<string, unknown>> {
  * Display quote details in formatted box
  */
 function displayQuote(quote: Quote): void {
+  console.log(quote)
   const basicInfo = [
     `Quote ID:        ${quote.quoteId}`,
     `Task ID:         ${quote.taskId}`,
-    `Estimated Price: ${quote.estimatedPrice.amount} ${quote.estimatedPrice.currency}`,
-    `Created:         ${new Date(quote.createdAt).toLocaleString()}`,
+    `Estimated Price: ${quote.price.value} ${quote.price.currency}`,
     `Expiry:          ${formatTimeRemaining(quote.expiresAt)}`,
   ].join("\n");
 
   box(basicInfo);
-
-  // Display per-capability breakdown
-  if (quote.capabilities.length > 0) {
-    console.log("");
-    console.log("Capability Breakdown:");
-    console.log("");
-
-    const headers = ["CAPABILITY ID", "PRICE"];
-    const rows = quote.capabilities.map(cap => [
-      cap.capabilityId,
-      `${cap.estimatedPrice.amount} ${cap.estimatedPrice.currency}`,
-    ]);
-
-    table(headers, rows);
-  }
 }

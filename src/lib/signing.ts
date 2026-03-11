@@ -75,7 +75,7 @@ export async function signRequest(
     path,
     bodyHash,
   };
-  
+
   // Create message to sign
   const message = [
     components.workspaceId,
@@ -87,7 +87,7 @@ export async function signRequest(
     components.path,
     components.bodyHash,
   ].join("\n");
-  
+
   // Sign message
   const encoder = new TextEncoder();
   const messageBytes = encoder.encode(message);

@@ -25,7 +25,6 @@ export interface VerificationKey {
 }
 
 export interface VerificationKeyCreate {
-  keyId?: string;
   workspaceId: string;
   createdBy: string;
   publicKey: string;

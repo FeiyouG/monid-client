@@ -21,6 +21,7 @@ export interface KeyConfig {
   label: string;
   fingerprint: string;
   algorithm: string;
+  status: string;  // "ACTIVE" or "REVOKED"
   created_at: string;
   expires_at?: string;
 }
@@ -82,6 +83,7 @@ export interface ParsedArgs {
   cursor?: string;
   title?: string;
   description?: string;
+  expiresAt?: string;
 }
 
 // Re-export all types

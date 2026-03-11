@@ -70,7 +70,6 @@ export async function makeAuthenticatedRequest<T>(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  console.log(headers)
   // Make request
   const response = await fetch(url, {
     method: method.toUpperCase(),

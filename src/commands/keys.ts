@@ -50,10 +50,13 @@ async function keysGenerate(args: ParsedArgs): Promise<void> {
   try {
     // Accept label as positional argument (args._[2]) or --label flag
     const label = (args._[2] as string | undefined) || (args.label as string | undefined);
+    const expiresAtArg = args.expiresAt as string | undefined;
     
     if (!label) {
       error("Please provide a key label");
       console.log("Example: scopeos-cli keys generate my-production-key");
+      console.log("With expiry: scopeos-cli keys generate my-key --expires-at 2027-12-31");
+      console.log("            scopeos-cli keys generate my-key --expires-at 1y");
       Deno.exit(1);
     }
     
@@ -110,6 +113,22 @@ async function keysGenerate(args: ParsedArgs): Promise<void> {
     
     success("Private key saved locally");
     
+    // Calculate expiry date
+    let expiresAt: string | undefined;
+    if (expiresAtArg) {
+      try {
+        const expiryDate = parseExpiryDate(expiresAtArg);
+        expiresAt = expiryDate.toISOString();
+        info(`Key will expire at: ${expiryDate.toLocaleString()}`);
+      } catch (err) {
+        error(err instanceof Error ? err.message : String(err));
+        Deno.exit(1);
+      }
+    } else {
+      expiresAt = undefined;
+      info("Key will never expire (no expiry date set)");
+    }
+    
     // Register with backend
     info("Registering public key with backend...");
     
@@ -120,20 +139,27 @@ async function keysGenerate(args: ParsedArgs): Promise<void> {
       fingerprint,
       label,
       algorithm: "ED25519",
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
+      expiresAt,
     };
     
     const registeredKey = await registerKey(accessToken, workspaceId, keyCreate);
     
     // Add key to config
-    config.keys.push({
+    const keyConfig: any = {
       key_id: registeredKey.keyId,
       label: registeredKey.label,
       fingerprint: registeredKey.fingerprint,
       algorithm: registeredKey.algorithm,
+      status: registeredKey.status || "ACTIVE",  // Default to ACTIVE if backend doesn't return status
       created_at: registeredKey.createdAt,
-      expires_at: registeredKey.expiresAt,
-    });
+    };
+    
+    // Only add expires_at if it exists (avoid undefined in YAML)
+    if (registeredKey.expiresAt) {
+      keyConfig.expires_at = registeredKey.expiresAt;
+    }
+    
+    config.keys.push(keyConfig);
     
     // Set as activated key if none exists
     if (!config.activated_key) {
@@ -176,13 +202,18 @@ async function keysList(_args: ParsedArgs): Promise<void> {
       return;
     }
     
-    const headers = ["LABEL", "KEY ID", "FINGERPRINT", "EXPIRES"];
-    const rows = config.keys.map(key => [
-      key.label + (key.label === config.activated_key ? " *" : ""),
-      key.key_id.substring(0, 12) + "...",
-      key.fingerprint.substring(0, 30) + "...",
-      key.expires_at ? new Date(key.expires_at).toLocaleDateString() : "Never",
-    ]);
+    const headers = ["LABEL", "STATUS", "KEY ID", "FINGERPRINT", "EXPIRES"];
+    const rows = config.keys.map(key => {
+      const labelDisplay = key.label + (key.label === config.activated_key ? " *" : "");
+      const status = key.status || "ACTIVE";  // Backward compat: default to ACTIVE
+      const keyId = key.key_id.substring(0, 12) + "...";
+      const fingerprint = key.fingerprint.substring(0, 30) + "...";
+      const expires = key.expires_at 
+        ? new Date(key.expires_at).toLocaleDateString() 
+        : "Never";
+      
+      return [labelDisplay, status, keyId, fingerprint, expires];
+    });
     
     console.log("");
     table(headers, rows);
@@ -213,10 +244,29 @@ async function keysActivate(args: ParsedArgs): Promise<void> {
     }
     
     // Check if key exists
-    const keyExists = config.keys.some(k => k.label === label);
-    if (!keyExists) {
+    const targetKey = config.keys.find(k => k.label === label);
+    if (!targetKey) {
       error(`Key '${label}' not found`);
       Deno.exit(1);
+    }
+    
+    // Prevent activating revoked keys
+    if (targetKey.status === "REVOKED") {
+      error(`Cannot activate revoked key '${label}'`);
+      info("This key has been revoked on the server");
+      info("Generate a new key with 'scopeos-cli keys generate --label <name>'");
+      Deno.exit(1);
+    }
+    
+    // Check if expired
+    if (targetKey.expires_at) {
+      const expiryDate = new Date(targetKey.expires_at);
+      if (expiryDate < new Date()) {
+        error(`Cannot activate expired key '${label}'`);
+        info(`This key expired on ${expiryDate.toLocaleString()}`);
+        info("Generate a new key with 'scopeos-cli keys generate --label <name>'");
+        Deno.exit(1);
+      }
     }
     
     config.activated_key = label as string;
@@ -268,9 +318,15 @@ async function keysDelete(args: ParsedArgs): Promise<void> {
     
     config.keys.splice(keyIndex, 1);
     
-    // If this was the activated key, clear it
+    // If this was the activated key, handle re-assignment
     if (config.activated_key === label) {
-      config.activated_key = config.keys.length > 0 ? config.keys[0].label : undefined;
+      // Find first ACTIVE key
+      const nextActiveKey = config.keys.find(k => k.status === "ACTIVE");
+      if (nextActiveKey) {
+        config.activated_key = nextActiveKey.label;
+      } else {
+        delete config.activated_key;  // FIXED: Use delete instead of = undefined
+      }
     }
     
     await saveConfig(config);
@@ -371,6 +427,43 @@ async function keysRename(args: ParsedArgs): Promise<void> {
   }
 }
 
+/**
+ * Parse expiry date from user input
+ * Supports:
+ * - ISO 8601: "2027-12-31T23:59:59Z" or "2027-12-31"
+ * - Relative: "1y", "365d", "30d", "6M"
+ */
+function parseExpiryDate(input: string): Date {
+  // Try parsing as ISO 8601 first
+  const isoDate = new Date(input);
+  if (!isNaN(isoDate.getTime())) {
+    return isoDate;
+  }
+  
+  // Parse relative duration
+  const match = input.match(/^(\d+)(y|M|d|h)$/);
+  if (!match) {
+    throw new Error(`Invalid expiry format: ${input}. Use ISO 8601 (e.g., '2027-12-31') or relative duration (e.g., '1y', '30d')`);
+  }
+  
+  const value = parseInt(match[1]);
+  const unit = match[2];
+  
+  const now = new Date();
+  switch (unit) {
+    case 'y': // years
+      return new Date(now.setFullYear(now.getFullYear() + value));
+    case 'M': // months
+      return new Date(now.setMonth(now.getMonth() + value));
+    case 'd': // days
+      return new Date(now.setDate(now.getDate() + value));
+    case 'h': // hours
+      return new Date(now.setHours(now.getHours() + value));
+    default:
+      throw new Error(`Unknown time unit: ${unit}`);
+  }
+}
+
 async function keysRevoke(args: ParsedArgs): Promise<void> {
   try {
     const label = args._[2] as string | undefined;
@@ -430,8 +523,32 @@ async function keysRevoke(args: ParsedArgs): Promise<void> {
       throw new Error(`Failed to revoke key: ${response.status} ${errorText}`);
     }
     
-    success(`Key '${label}' has been revoked on the server`);
-    info("The key remains in local config. Use 'keys delete' to remove it locally.");
+    // Update local config to mark key as REVOKED
+    const keyIndex = config.keys.findIndex(k => k.label === label);
+    if (keyIndex !== -1) {
+      config.keys[keyIndex].status = "REVOKED";
+    }
+    
+    // If this was the activated key, switch to another ACTIVE key
+    if (config.activated_key === label) {
+      const activeKey = config.keys.find(k => k.status === "ACTIVE");
+      if (activeKey) {
+        config.activated_key = activeKey.label;
+        console.log("");
+        info(`Switched active key to: ${activeKey.label}`);
+      } else {
+        delete config.activated_key;
+        console.log("");
+        info("No active keys remaining. Generate a new key with 'keys generate'");
+      }
+    }
+    
+    await saveConfig(config);
+    
+    console.log("");
+    success(`Key '${label}' has been revoked on the server and marked as REVOKED locally`);
+    info("The key remains in config for audit purposes. Use 'keys delete' to remove it.");
+    console.log("");
     
   } catch (err) {
     error(`Failed to revoke key: ${err instanceof Error ? err.message : String(err)}`);

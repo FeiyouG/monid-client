@@ -23,6 +23,9 @@ Commands:
   
   API Keys:
     keys generate <label>   Generate and register a new key pair
+                            Options: --expires-at <date|duration>
+                              Date: ISO 8601 format (e.g., '2027-12-31')
+                              Duration: Relative (e.g., '1y', '365d', '30d')
     keys list               List all keys for current workspace
     keys activate <label>   Set the active key for signing requests
     keys delete <label>     Delete a local key
@@ -60,7 +63,12 @@ Options:
 Examples:
   # Authentication
   scopeos-cli auth login
+  
+  # Generate keys
   scopeos-cli keys generate my-key
+  scopeos-cli keys generate my-key --expires-at 2027-12-31
+  scopeos-cli keys generate my-key --expires-at 1y
+  scopeos-cli keys generate my-key --expires-at 90d
   
   # Tasks
   scopeos-cli tasks create --title "Research" --description "Company research" \\
@@ -88,12 +96,13 @@ Examples:
 async function main() {
   const args = parseArgs(Deno.args, {
     boolean: ["help", "version", "verbose", "yes", "wait"],
-    string: ["label", "method", "data", "key", "header", "output", "outputSchema", "inputSchema", "capabilities", "input", "cursor", "title", "description", "limit"],
+    string: ["label", "method", "data", "key", "header", "output", "outputSchema", "inputSchema", "capabilities", "input", "cursor", "title", "description", "limit", "expiresAt", "expires-at"],
     collect: ["header"],
     alias: {
       h: "help",
       v: "version",
       y: "yes",
+      "expires-at": "expiresAt",  // Map kebab-case to camelCase
     },
   });
 

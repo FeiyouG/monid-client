@@ -2,10 +2,13 @@
  * Quote types for ScopeOS API
  */
 
+import { JSONSchema } from "./task.ts";
+
 // Price structure
 export interface Price {
-  amount: number;
+  value: number;
   currency: string;
+  type: string;
 }
 
 // Per-capability quote breakdown
@@ -19,13 +22,14 @@ export interface CapabilityQuote {
 export interface Quote {
   quoteId: string;
   taskId: string;
-  estimatedPrice: Price;
-  capabilities: CapabilityQuote[];
+  workspaceId: string;
+  price: Price;
   expiresAt: string;
   createdAt: string;
+  metadata: JSONSchema,
 }
 
 // Payload for creating a quote
 export interface QuoteCreate {
-  input: Record<string, unknown>;
+  taskId: string
 }
