@@ -34,32 +34,54 @@ export async function fetchWorkspaces(accessToken: string): Promise<WorkspaceSum
 /**
  * Ensures a workspace is selected in the config.
  * If no workspace is selected, fetches workspaces and prompts user to select one.
- * Returns the selected workspace ID.
+ * 
+ * @param accessToken - OAuth access token
+ * @param preferredWorkspaceId - Optional workspace ID to use (validates against fetched workspaces)
+ * @param isLogin - If true, always fetch workspaces (ignore existing config)
+ * @returns The selected workspace ID
+ * @throws Error if no workspaces found or preferredWorkspaceId is invalid
  */
-export async function ensureWorkspaceSelected(accessToken: string): Promise<string> {
+export async function ensureWorkspaceSelected(
+  accessToken: string,
+  preferredWorkspaceId?: string,
+  isLogin: boolean = false
+): Promise<string> {
   const config = await loadConfig();
   
-  // If workspace already selected, return it
-  if (config?.workspace?.id) {
+  // Only return existing workspace if NOT in login mode
+  if (!isLogin && config?.workspace?.id) {
     return config.workspace.id;
   }
   
-  // No workspace selected, need to select one
-  info("No workspace selected. Fetching available workspaces...");
-  
+  // Fetch workspaces (either for login or first-time selection)
+  info("Fetching available workspaces...");
   const workspaces = await fetchWorkspaces(accessToken);
   
   if (workspaces.length === 0) {
-    error("No workspaces found for this account.");
-    Deno.exit(1);
+    throw new Error("No workspaces found for this account");
   }
   
-  // Handle workspace selection
   let selectedWorkspace: WorkspaceSummary;
-  if (workspaces.length === 1) {
+  
+  // If preferred workspace ID provided, validate it
+  if (preferredWorkspaceId) {
+    const found = workspaces.find(w => w.workspaceId === preferredWorkspaceId);
+    if (!found) {
+      const available = workspaces.map(w => `${w.slug} (${w.workspaceId})`).join(", ");
+      throw new Error(
+        `Workspace ID '${preferredWorkspaceId}' not found. Available workspaces: ${available}`
+      );
+    }
+    selectedWorkspace = found;
+    info(`Using workspace: ${selectedWorkspace.slug} (${selectedWorkspace.workspaceId})`);
+  }
+  // Single workspace - auto-select
+  else if (workspaces.length === 1) {
     selectedWorkspace = workspaces[0];
     info(`Automatically selected workspace: ${selectedWorkspace.slug} (${selectedWorkspace.workspaceId})`);
-  } else {
+  }
+  // Multiple workspaces - interactive prompt
+  else {
     selectedWorkspace = await promptWorkspaceSelection(workspaces);
     success(`Selected workspace: ${selectedWorkspace.slug} (${selectedWorkspace.workspaceId})`);
   }

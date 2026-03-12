@@ -5,12 +5,12 @@
 
 import { Command } from "@cliffy/command";
 import { Confirm } from "@cliffy/prompt";
-import type { Task, Quote, QuoteCreate, Execution, ExecutionCreate } from "../../types/index.ts";
-import { parseSchema } from "../shared/task-flags.ts";
-import { apiPost } from "../../lib/api-client.ts";
-import { pollExecution } from "../../lib/polling.ts";
-import { success, error, info, statusBadge, formatTimeRemaining } from "../../utils/display.ts";
-import { displayExecutionResult } from "./executions.ts";
+import type { Task, Quote, QuoteCreate, Execution, ExecutionCreate } from "../../../types/index.ts";
+import { parseSchema } from "../../shared/task-flags.ts";
+import { apiPost } from "../../../lib/api-client.ts";
+import { pollExecution } from "../../../lib/polling.ts";
+import { success, error, info, statusBadge, formatTimeRemaining } from "../../../utils/display.ts";
+import { displayExecutionResult } from "../executions/get/mod.ts";
 
 export const searchCommand = new Command()
   .name("search")

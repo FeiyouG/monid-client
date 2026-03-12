@@ -4,6 +4,7 @@
  */
 
 import { encodeBase64 } from "@std/encoding/base64";
+import { KeyConfig } from "../types/index.ts";
 
 export async function generateFingerprint(publicKeyRaw: Uint8Array): Promise<string> {
   // Hash the raw public key with SHA-256
@@ -93,9 +94,9 @@ export function matchesFingerprint(
  * @returns Matching key or undefined
  */
 export function findKeyByLabelOrFingerprint(
-  keys: any[],
+  keys: KeyConfig[],
   identifier: string
-): any | undefined {
+): KeyConfig | undefined {
   // Try exact label match first
   const byLabel = keys.find(k => k.label === identifier);
   if (byLabel) return byLabel;

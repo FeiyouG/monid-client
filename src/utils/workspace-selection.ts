@@ -2,13 +2,13 @@
  * Workspace selection UI for interactive CLI
  */
 
+import { Select } from "@cliffy/prompt";
 import type { WorkspaceSummary } from "../types/index.ts";
-import { error } from "./display.ts";
 
 /**
- * Prompts user to select a workspace from a list of organizations
- * @param organizations Array of organizations to choose from
- * @returns Selected organization
+ * Prompts user to select a workspace from a list using Cliffy's Select prompt
+ * @param workspaces Array of workspaces to choose from
+ * @returns Selected workspace
  */
 export async function promptWorkspaceSelection(
   workspaces: WorkspaceSummary[]
@@ -21,34 +21,21 @@ export async function promptWorkspaceSelection(
     return workspaces[0];
   }
 
-  console.log("\nAvailable workspaces:\n");
+  const choices = workspaces.map(w => ({
+    name: `${w.slug} (${w.workspaceId})`,
+    value: w.workspaceId,
+  }));
 
-  // Display numbered list
-  workspaces.forEach((workspace, index) => {
-    const number = (index + 1).toString().padStart(2, " ");
-    console.log(`  ${number}. ${workspace.slug} (${workspace.workspaceId})`);
+  const selectedId = await Select.prompt({
+    message: "Select a workspace:",
+    options: choices,
+    search: true, // Enable search/filter
   });
 
-  console.log("");
-
-  // Prompt for selection
-  while (true) {
-    const input = prompt(`Select workspace [1-${workspaces.length}]:`);
-
-    if (input === null) {
-      // User pressed Ctrl+C or canceled
-      console.log("\nWorkspace selection canceled.");
-      Deno.exit(0);
-    }
-
-    const trimmed = input.trim();
-    const choice = parseInt(trimmed, 10);
-
-    if (isNaN(choice) || choice < 1 || choice > workspaces.length) {
-      error(`Invalid selection. Please enter a number between 1 and ${workspaces.length}.`);
-      continue;
-    }
-
-    return workspaces[choice - 1];
+  const selected = workspaces.find(w => w.workspaceId === selectedId);
+  if (!selected) {
+    throw new Error("Selected workspace not found");
   }
+
+  return selected;
 }

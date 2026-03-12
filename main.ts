@@ -7,12 +7,12 @@
 
 import { Command } from "@cliffy/command";
 import { CompletionsCommand } from "@cliffy/command/completions";
-import { authCommand } from "./src/cli/commands/auth.ts";
-import { keysCommand } from "./src/cli/commands/keys.ts";
-import { tasksCommand } from "./src/cli/commands/tasks.ts";
-import { quotesCommand } from "./src/cli/commands/quotes.ts";
-import { searchCommand } from "./src/cli/commands/search.ts";
-import { executionsCommand } from "./src/cli/commands/executions.ts";
+import { authCommand } from "./src/cli/commands/auth/mod.ts";
+import { keysCommand } from "./src/cli/commands/keys/mod.ts";
+import { tasksCommand } from "./src/cli/commands/tasks/mod.ts";
+import { quotesCommand } from "./src/cli/commands/quotes/mod.ts";
+import { searchCommand } from "./src/cli/commands/search/mod.ts";
+import { executionsCommand } from "./src/cli/commands/executions/mod.ts";
 
 const VERSION = "0.1.0";
 

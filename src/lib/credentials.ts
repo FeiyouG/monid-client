@@ -52,3 +52,12 @@ export async function getAccessToken(): Promise<string | null> {
   const creds = await loadCredentials();
   return creds?.access_token || null;
 }
+
+export async function clearCredentials(): Promise<void> {
+  const credPath = await getCredentialsPath();
+  try {
+    await Deno.remove(credPath);
+  } catch {
+    // Ignore if file doesn't exist
+  }
+}
