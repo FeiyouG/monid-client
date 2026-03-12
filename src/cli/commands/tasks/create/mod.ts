@@ -6,9 +6,9 @@ import { Command } from "@cliffy/command";
 import { Table, Column } from "@cliffy/table";
 import type { Task } from "../../../../types/index.ts";
 import { parseSchema } from "../../../shared/task-flags.ts";
-import { apiPost } from "../../../../lib/api-client.ts";
 import { success, error, info, prettyJson } from "../../../../utils/display.ts";
 import { TaskCreate } from "../../../../types/task.ts";
+import { getCliCoreClient } from "../../../core-client.ts";
 
 export const createCommand = new Command()
   .name("create")
@@ -29,8 +29,8 @@ export const createCommand = new Command()
         query: options.query,
         outputSchema,
       };
-      
-      const task = await apiPost<Task>("/v1/tasks", taskCreate);
+
+      const task = await getCliCoreClient().tasks.create(taskCreate);
       
       console.log("");
       success("Task created successfully");

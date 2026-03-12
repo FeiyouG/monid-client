@@ -6,9 +6,8 @@
 import { Command } from "@cliffy/command";
 import { Table, Column } from "@cliffy/table";
 import type { Execution } from "../../../../types/index.ts";
-import { apiGet } from "../../../../lib/api-client.ts";
-import { pollExecution } from "../../../../lib/polling.ts";
 import { success, error, info, prettyJson, statusBadge, formatTimeRemaining } from "../../../../utils/display.ts";
+import { getCliCoreClient } from "../../../core-client.ts";
 
 export const getCommand = new Command()
   .name("get")
@@ -19,26 +18,17 @@ export const getCommand = new Command()
   .action(async (options: { executionId: string; wait?: boolean | number; output?: string }) => {
     try {
       info("Fetching execution...");
-      
-      let execution = await apiGet<Execution>(`/v1/executions/${options.executionId}`);
-      const waitTimeoutMs = getWaitTimeoutMs(options.wait);
-      
-      if (options.wait !== undefined && !["COMPLETED", "FAILED"].includes(execution.status)) {
+
+      if (options.wait !== undefined) {
         console.log("");
         info("Waiting for completion...");
         console.log("");
-        try {
-          execution = await pollExecution(
-            options.executionId,
-            waitTimeoutMs ? { timeout: waitTimeoutMs } : {},
-          );
-        } catch (err) {
-          if (waitTimeoutMs && err instanceof Error && err.message.includes("Polling timeout")) {
-            throw new Error(`Execution did not reach terminal status within ${Math.floor(waitTimeoutMs / 1000)} seconds`);
-          }
-          throw err;
-        }
       }
+
+      const execution = await getCliCoreClient().executions.getWithWait(
+        options.executionId,
+        options.wait,
+      );
       
       console.log("");
       displayExecutionResult(execution, options.output);
@@ -47,18 +37,6 @@ export const getCommand = new Command()
       throw err;
     }
   });
-
-function getWaitTimeoutMs(wait?: boolean | number): number | undefined {
-  if (wait === undefined || wait === true) {
-    return undefined;
-  }
-
-  if (typeof wait !== "number" || !Number.isFinite(wait) || wait <= 0) {
-    throw new Error("Invalid --wait timeout. Please provide a positive number of seconds.");
-  }
-
-  return wait * 1000;
-}
 
 /**
  * Display execution result with table and optional results output

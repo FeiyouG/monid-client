@@ -5,8 +5,8 @@
 import { Command } from "@cliffy/command";
 import { Table, Column } from "@cliffy/table";
 import type { Task } from "../../../../types/index.ts";
-import { apiGet } from "../../../../lib/api-client.ts";
 import { error, info, prettyJson } from "../../../../utils/display.ts";
+import { getCliCoreClient } from "../../../core-client.ts";
 
 export const getCommand = new Command()
   .name("get")
@@ -16,7 +16,7 @@ export const getCommand = new Command()
     try {
       info("Fetching task...");
       
-      const task = await apiGet<Task>(`/v1/tasks/${options.taskId}`);
+      const task = await getCliCoreClient().tasks.get(options.taskId);
       
       console.log("");
       displayTask(task);

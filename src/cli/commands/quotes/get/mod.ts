@@ -5,15 +5,16 @@
 
 import { Command } from "@cliffy/command";
 import { Column, Table } from "@cliffy/table";
-import type { Quote, QuoteCreate, Task } from "../../../../types/index.ts";
+import type { Quote } from "../../../../types/index.ts";
 import { parseSchema } from "../../../shared/task-flags.ts";
-import { apiPost } from "../../../../lib/api-client.ts";
 import {
   error,
   formatTimeRemaining,
   info,
   success,
 } from "../../../../utils/display.ts";
+import { getCliCoreClient } from "../../../core-client.ts";
+import type { TaskCreate } from "../../../../types/task.ts";
 
 export const getCommand = new Command()
   .name("get")
@@ -44,36 +45,30 @@ export const getCommand = new Command()
   })
   .action(async (options: any) => {
     try {
-      let taskId = options.taskId;
+      const client = getCliCoreClient();
+      let quote: Quote;
 
       // Create task if flags provided
       if (options.name && options.query && options.outputSchema) {
-        info("Creating task...");
+        info("Creating task and getting a quote...");
 
         const schema = await parseSchema(options.outputSchema);
-        const task = await apiPost<Task>("/v1/tasks", {
+        const taskCreate: TaskCreate = {
           name: options.name,
           description: options.description,
           query: options.query,
           outputSchema: schema,
-        });
+        };
 
-        taskId = task.taskId;
-        success(`Task created: ${taskId}`);
-      }
-
-      if (!taskId) {
+        quote = await client.quotes.get({ taskCreate });
+        success(`Task created: ${quote.taskId}`);
+      } else if (options.taskId) {
+        info("Getting a quote...");
+        quote = await client.quotes.get({ taskId: options.taskId });
+      } else {
         error("Provide --task-id OR (--name + --query + --output-schema)");
         Deno.exit(1);
       }
-
-      // Create quote
-      info("Getting a quote...");
-      const quoteCreate: QuoteCreate = { taskId };
-      const quote = await apiPost<Quote>(
-        `/v1/tasks/${taskId}/quotes`,
-        quoteCreate,
-      );
 
       new Table()
         .header(["Quote Id", "Task Id", "Estimated Price", "Expiry"])
@@ -86,6 +81,7 @@ export const getCommand = new Command()
           ],
         ])
         .columns([new Column().minWidth(10)])
+        .border(false)
         .render();
 
       console.log("");

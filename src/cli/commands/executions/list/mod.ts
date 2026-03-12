@@ -4,9 +4,9 @@
 
 import { Command } from "@cliffy/command";
 import { Column, Table } from "@cliffy/table";
-import type { Execution, ExecutionsListResponse } from "../../../../types/index.ts";
-import { apiGet } from "../../../../lib/api-client.ts";
+import type { Execution } from "../../../../types/index.ts";
 import { error, info, statusBadge } from "../../../../utils/display.ts";
+import { getCliCoreClient } from "../../../core-client.ts";
 
 export const listCommand = new Command()
   .name("list")
@@ -18,14 +18,13 @@ export const listCommand = new Command()
     try {
       info("Fetching executions...");
 
-      let path = `/v1/tasks/${options.taskId}/executions?limit=${options.limit}`;
-      if (options.cursor) {
-        path += `&cursor=${encodeURIComponent(options.cursor)}`;
-      }
-
-      const response = await apiGet<Execution[] | ExecutionsListResponse>(path);
-      const items = Array.isArray(response) ? response : response.items;
-      const nextCursor = Array.isArray(response) ? null : response.cursor;
+      const response = await getCliCoreClient().executions.list({
+        taskId: options.taskId,
+        limit: options.limit,
+        cursor: options.cursor,
+      });
+      const items = response.items;
+      const nextCursor = response.cursor;
 
       if (items.length === 0) {
         console.log("");

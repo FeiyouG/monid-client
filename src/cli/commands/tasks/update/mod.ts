@@ -6,8 +6,8 @@ import { Command } from "@cliffy/command";
 import { Table, Column } from "@cliffy/table";
 import type { Task } from "../../../../types/index.ts";
 import { parseSchema } from "../../../shared/task-flags.ts";
-import { apiPatch } from "../../../../lib/api-client.ts";
 import { success, error, info, prettyJson } from "../../../../utils/display.ts";
+import { getCliCoreClient } from "../../../core-client.ts";
 
 export const updateCommand = new Command()
   .name("update")
@@ -33,7 +33,7 @@ export const updateCommand = new Command()
       if (options.query) taskUpdate.query = options.query;
       if (options.outputSchema) taskUpdate.outputSchema = await parseSchema(options.outputSchema);
       
-      const task = await apiPatch<Task>(`/v1/tasks/${options.taskId}`, taskUpdate);
+      const task = await getCliCoreClient().tasks.update(options.taskId, taskUpdate);
       
       console.log("");
       success("Task updated successfully");

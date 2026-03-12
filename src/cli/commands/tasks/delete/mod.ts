@@ -4,8 +4,8 @@
 
 import { Command } from "@cliffy/command";
 import { Confirm } from "@cliffy/prompt";
-import { apiDelete } from "../../../../lib/api-client.ts";
 import { success, error, info } from "../../../../utils/display.ts";
+import { getCliCoreClient } from "../../../core-client.ts";
 
 export const deleteCommand = new Command()
   .name("delete")
@@ -25,7 +25,7 @@ export const deleteCommand = new Command()
       
       info("Deleting task...");
       
-      await apiDelete(`/v1/tasks/${options.taskId}`);
+      await getCliCoreClient().tasks.delete(options.taskId);
       
       console.log("");
       success(`Task '${options.taskId}' deleted`);

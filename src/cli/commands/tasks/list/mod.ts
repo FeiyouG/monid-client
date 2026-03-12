@@ -4,9 +4,9 @@
 
 import { Command } from "@cliffy/command";
 import { Table, Column } from "@cliffy/table";
-import type { Task, TasksListResponse } from "../../../../types/index.ts";
-import { apiGet } from "../../../../lib/api-client.ts";
+import type { Task } from "../../../../types/index.ts";
 import { error, info } from "../../../../utils/display.ts";
+import { getCliCoreClient } from "../../../core-client.ts";
 
 export const listCommand = new Command()
   .name("list")
@@ -17,12 +17,10 @@ export const listCommand = new Command()
     try {
       info("Fetching tasks...");
       
-      let path = `/v1/tasks?limit=${options.limit}`;
-      if (options.cursor) {
-        path += `&cursor=${encodeURIComponent(options.cursor)}`;
-      }
-      
-      const response = await apiGet<TasksListResponse>(path);
+      const response = await getCliCoreClient().tasks.list({
+        limit: options.limit,
+        cursor: options.cursor,
+      });
       
       if (response.items.length === 0) {
         console.log("");
