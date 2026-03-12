@@ -3,7 +3,7 @@
  */
 
 import { Command } from "@cliffy/command";
-import { Table } from "@cliffy/table";
+import { Table, Column } from "@cliffy/table";
 import type { Task, TasksListResponse } from "../../../../types/index.ts";
 import { apiGet } from "../../../../lib/api-client.ts";
 import { error, info } from "../../../../utils/display.ts";
@@ -42,7 +42,8 @@ export const listCommand = new Command()
       new Table()
         .header(["Task ID", "Name", "Description", "Created"])
         .body(rows)
-        .border(true)
+        .columns([new Column().minWidth(10)])
+        .border(false)
         .render();
       console.log("");
       

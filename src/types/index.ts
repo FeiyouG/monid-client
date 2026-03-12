@@ -79,7 +79,7 @@ export interface ParsedArgs {
   inputSchema?: string;
   capabilities?: string;
   input?: string;
-  wait?: boolean;
+  wait?: boolean | number;
   limit?: number | string;
   cursor?: string;
   title?: string;

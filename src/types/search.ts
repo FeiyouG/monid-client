@@ -30,6 +30,12 @@ export interface Execution {
   result?: ExecutionResult;
 }
 
+// Paginated list response
+export interface ExecutionsListResponse {
+  items: Execution[];
+  cursor?: string | null;
+}
+
 // Payload for creating an execution
 export interface ExecutionCreate {
   quoteId: string;

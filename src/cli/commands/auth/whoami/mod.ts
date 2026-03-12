@@ -4,7 +4,7 @@
  */
 
 import { Command } from "@cliffy/command";
-import { Table } from "@cliffy/table";
+import { Table, Column } from "@cliffy/table";
 import { loadConfig } from "../../../../lib/config.ts";
 import { loadCredentials } from "../../../../lib/credentials.ts";
 import { error } from "../../../../utils/display.ts";
@@ -33,7 +33,8 @@ export const whoamiCommand = new Command()
           ["Last login", config.auth?.last_login || "unknown"],
           ["Active Key", config.activated_key || "none (run 'keys generate' to create one)"],
         ])
-        .border(true)
+        .columns([new Column().minWidth(10)])
+        .border(false)
         .render();
 
       // Check if credentials are still valid

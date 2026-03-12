@@ -33,7 +33,7 @@ export interface Task {
 // Payload for creating a new task
 export interface TaskCreate {
   name: string;
-  description: string;
+  description: string | undefined;
   query: string;
   outputSchema: JSONSchema;
   metadata?: Record<string, unknown>;

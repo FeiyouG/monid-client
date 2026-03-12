@@ -4,7 +4,7 @@
  */
 
 import { Command } from "@cliffy/command";
-import { Table } from "@cliffy/table";
+import { Table, Column } from "@cliffy/table";
 import type { Execution } from "../../../../types/index.ts";
 import { apiGet } from "../../../../lib/api-client.ts";
 import { pollExecution } from "../../../../lib/polling.ts";
@@ -14,19 +14,30 @@ export const getCommand = new Command()
   .name("get")
   .description("Get execution status and results")
   .option("-e, --execution-id <id:string>", "Execution ID", { required: true })
-  .option("-w, --wait", "Wait for completion")
+  .option("-w, --wait [timeout:number]", "Wait for completion (optional timeout in seconds)")
   .option("-o, --output <file:string>", "Save results to file")
-  .action(async (options: { executionId: string; wait?: boolean; output?: string }) => {
+  .action(async (options: { executionId: string; wait?: boolean | number; output?: string }) => {
     try {
       info("Fetching execution...");
       
       let execution = await apiGet<Execution>(`/v1/executions/${options.executionId}`);
+      const waitTimeoutMs = getWaitTimeoutMs(options.wait);
       
-      if (options.wait && !["COMPLETED", "FAILED"].includes(execution.status)) {
+      if (options.wait !== undefined && !["COMPLETED", "FAILED"].includes(execution.status)) {
         console.log("");
         info("Waiting for completion...");
         console.log("");
-        execution = await pollExecution(options.executionId);
+        try {
+          execution = await pollExecution(
+            options.executionId,
+            waitTimeoutMs ? { timeout: waitTimeoutMs } : {},
+          );
+        } catch (err) {
+          if (waitTimeoutMs && err instanceof Error && err.message.includes("Polling timeout")) {
+            throw new Error(`Execution did not reach terminal status within ${Math.floor(waitTimeoutMs / 1000)} seconds`);
+          }
+          throw err;
+        }
       }
       
       console.log("");
@@ -36,6 +47,18 @@ export const getCommand = new Command()
       throw err;
     }
   });
+
+function getWaitTimeoutMs(wait?: boolean | number): number | undefined {
+  if (wait === undefined || wait === true) {
+    return undefined;
+  }
+
+  if (typeof wait !== "number" || !Number.isFinite(wait) || wait <= 0) {
+    throw new Error("Invalid --wait timeout. Please provide a positive number of seconds.");
+  }
+
+  return wait * 1000;
+}
 
 /**
  * Display execution result with table and optional results output
@@ -65,7 +88,8 @@ export function displayExecutionResult(execution: Execution, outputFile?: string
   new Table()
     .header(["Property", "Value"])
     .body(rows)
-    .border(true)
+    .columns([new Column().minWidth(10)])
+    .border(false)
     .render();
   console.log("");
   

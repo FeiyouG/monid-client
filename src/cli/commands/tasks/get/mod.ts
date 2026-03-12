@@ -3,7 +3,7 @@
  */
 
 import { Command } from "@cliffy/command";
-import { Table } from "@cliffy/table";
+import { Table, Column } from "@cliffy/table";
 import type { Task } from "../../../../types/index.ts";
 import { apiGet } from "../../../../lib/api-client.ts";
 import { error, info, prettyJson } from "../../../../utils/display.ts";
@@ -38,7 +38,8 @@ function displayTask(task: Task): void {
       ["Created", new Date(task.createdAt).toLocaleString()],
       ["Updated", new Date(task.updatedAt).toLocaleString()],
     ])
-    .border(true)
+    .columns([new Column().minWidth(10)])
+    .border(false)
     .render();
   
   console.log("");

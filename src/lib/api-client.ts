@@ -113,7 +113,7 @@ async function handleApiError(response: Response): Promise<never> {
     }
   } catch {
     // Failed to parse JSON error
-    errorMessage = await response.text() || response.statusText;
+    errorMessage = response.statusText;
   }
 
   // Add status code to message

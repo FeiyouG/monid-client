@@ -4,7 +4,7 @@
  */
 
 import { Command } from "@cliffy/command";
-import { Table } from "@cliffy/table";
+import { Table, Column } from "@cliffy/table";
 import { BUILD_CONFIG } from "../../../../config/build-config.ts";
 import {
   createDefaultConfig,
@@ -51,7 +51,8 @@ export const loginCommand = new Command()
           [""],
           ["Waiting for authentication..."],
         ])
-        .border(true)
+        .columns([new Column().minWidth(10)])
+        .border(false)
         .render();
       console.log("");
 

@@ -3,11 +3,12 @@
  */
 
 import { Command } from "@cliffy/command";
-import { Table } from "@cliffy/table";
+import { Table, Column } from "@cliffy/table";
 import type { Task } from "../../../../types/index.ts";
 import { parseSchema } from "../../../shared/task-flags.ts";
 import { apiPost } from "../../../../lib/api-client.ts";
 import { success, error, info, prettyJson } from "../../../../utils/display.ts";
+import { TaskCreate } from "../../../../types/task.ts";
 
 export const createCommand = new Command()
   .name("create")
@@ -16,13 +17,13 @@ export const createCommand = new Command()
   .option("-d, --description <desc:string>", "Task description")
   .option("-q, --query <query:string>", "Search query", { required: true })
   .option("-s, --output-schema <schema:string>", "Output schema (file or JSON)", { required: true })
-  .action(async (options: { name: string; description?: string; query: string; outputSchema: string }) => {
+  .action(async (options) => {
     try {
       info("Creating task...");
       
       const outputSchema = await parseSchema(options.outputSchema);
       
-      const taskCreate: any = {
+      const taskCreate: TaskCreate = {
         name: options.name,
         description: options.description,
         query: options.query,
@@ -53,7 +54,8 @@ function displayTask(task: Task): void {
       ["Created", new Date(task.createdAt).toLocaleString()],
       ["Updated", new Date(task.updatedAt).toLocaleString()],
     ])
-    .border(true)
+    .columns([new Column().minWidth(10)])
+    .border(false)
     .render();
   
   console.log("");
