@@ -1,9 +1,10 @@
 # Environment variables
-.env*
+.env
+.env.*
 !.env.template
 
-# Generated build configuration (contains environment-specific values)
-src/config/build-config.ts
+# Generated build configuration (contains hardcoded config for compiled binaries)
+packages/core/config/generated.ts
 
 # Build output
 dist/

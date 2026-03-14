@@ -1,0 +1,16 @@
+{
+  "name": "@feiyoug/scopeos-sdk",
+  "version": "0.1.0",
+  "exports": "./mod.ts",
+  "license": "MIT",
+  "publish": {
+    "include": [
+      "mod.ts",
+      "client.ts",
+      "README.md"
+    ],
+    "exclude": [
+      "**/*.test.ts"
+    ]
+  }
+}

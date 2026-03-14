@@ -128,6 +128,7 @@
       "jsr:@std/assert@1",
       "jsr:@std/cli@1",
       "jsr:@std/crypto@1",
+      "jsr:@std/dotenv@1",
       "jsr:@std/encoding@1",
       "jsr:@std/fs@1",
       "jsr:@std/http@1",
