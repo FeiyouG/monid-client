@@ -5,7 +5,7 @@
 import { CONFIG } from "@scopeos/core";
 import { loadConfig, saveConfig } from "./config.ts";
 import { promptWorkspaceSelection } from "@scopeos/utils";
-import { info, success, error } from "@scopeos/utils";
+import { info, success } from "@scopeos/utils";
 import type { WorkspaceSummary, WorkspacesResponse } from "@scopeos/types";
 
 /**

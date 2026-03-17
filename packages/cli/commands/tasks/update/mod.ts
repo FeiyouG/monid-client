@@ -27,7 +27,7 @@ export const updateCommand = new Command()
       
       info("Updating task...");
       
-      const taskUpdate: any = {};
+      const taskUpdate: Record<string, unknown> = {};
       if (options.name) taskUpdate.name = options.name;
       if (options.description) taskUpdate.description = options.description;
       if (options.query) taskUpdate.query = options.query;

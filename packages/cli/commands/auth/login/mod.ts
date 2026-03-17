@@ -5,7 +5,6 @@
 
 import { Command } from "@cliffy/command";
 import { Table, Column } from "@cliffy/table";
-import { CONFIG } from "@scopeos/core";
 import {
   createDefaultConfig,
   loadConfig,

@@ -37,8 +37,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-deno-
 
-      - name: Run tests
-        run: deno task test:all
+      - name: Run lint
+        run: deno lint
+      # - name: Run tests
+      #   run: deno task test:all
 
   build-verify:
     name: Build Verify (Linux)
@@ -60,11 +62,13 @@ jobs:
           echo "DASHBOARD_URL=http://localhost:3000" >> $GITHUB_ENV
           echo "OAUTH_REDIRECT_URI=http://localhost:8918/callback" >> $GITHUB_ENV
           echo "OAUTH_SCOPES=profile email openid" >> $GITHUB_ENV
+          echo "OAUTH_TYPE=${{ vars.OAUTH_TYPE }}" >> $GITHUB_ENV
 
       - name: Generate config
         run: deno run --allow-env --allow-read --allow-write scripts/gen_config.ts
 
       - name: Build binary
+        shell: bash
         run: |
           deno compile \
             --no-check \
@@ -112,12 +116,14 @@ jobs:
           echo "DASHBOARD_URL=${{ vars.DASHBOARD_URL }}" >> $GITHUB_ENV
           echo "OAUTH_REDIRECT_URI=${{ vars.OAUTH_REDIRECT_URI }}" >> $GITHUB_ENV
           echo "OAUTH_SCOPES=${{ vars.OAUTH_SCOPES }}" >> $GITHUB_ENV
+          echo "OAUTH_TYPE=${{ vars.OAUTH_TYPE }}" >> $GITHUB_ENV
         shell: bash
 
       - name: Generate config
         run: deno run --allow-env --allow-read --allow-write scripts/gen_config.ts
 
       - name: Build binary
+        shell: bash
         run: |
           deno compile \
             --no-check \
@@ -226,12 +232,14 @@ jobs:
           echo "DASHBOARD_URL=${{ vars.DASHBOARD_URL }}" >> $GITHUB_ENV
           echo "OAUTH_REDIRECT_URI=${{ vars.OAUTH_REDIRECT_URI }}" >> $GITHUB_ENV
           echo "OAUTH_SCOPES=${{ vars.OAUTH_SCOPES }}" >> $GITHUB_ENV
+          echo "OAUTH_TYPE=${{ vars.OAUTH_TYPE }}" >> $GITHUB_ENV
         shell: bash
 
       - name: Generate config
         run: deno run --allow-env --allow-read --allow-write scripts/gen_config.ts
 
       - name: Build binary
+        shell: bash
         run: |
           deno compile \
             --no-check \

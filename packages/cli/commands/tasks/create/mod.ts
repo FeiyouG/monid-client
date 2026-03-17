@@ -7,7 +7,7 @@ import { Table, Column } from "@cliffy/table";
 import type { Task } from "../../../../types/index.ts";
 import { parseSchema } from "../../../shared/task-flags.ts";
 import { success, error, info, prettyJson } from "../../../../utils/display.ts";
-import { TaskCreate } from "../../../../types/task.ts";
+import type { TaskCreate } from "../../../../types/task.ts";
 import { getCliCoreClient } from "../../../core-client.ts";
 
 export const createCommand = new Command()

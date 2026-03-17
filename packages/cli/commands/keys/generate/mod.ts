@@ -10,6 +10,7 @@ import type {
   VerificationKey,
   VerificationKeyCreate,
 } from "../../../../types/verification-key.ts";
+import type { KeyConfig } from "../../../../types/index.ts";
 import { getKeysDir, loadConfig, saveConfig } from "../../../../lib/config.ts";
 import { getAccessToken } from "../../../../lib/credentials.ts";
 import { ensureWorkspaceSelected } from "../../../../lib/workspace.ts";
@@ -139,7 +140,7 @@ export const generateCommand = new Command()
       );
 
       // Add key to config with fingerprint_short
-      const keyConfig: any = {
+      const keyConfig: KeyConfig = {
         key_id: registeredKey.keyId,
         label: registeredKey.label,
         fingerprint: registeredKey.fingerprint,

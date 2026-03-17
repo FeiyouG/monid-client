@@ -43,7 +43,7 @@ export const getCommand = new Command()
   .option("-t, --task-id <id:string>", "Existing task ID", {
     conflicts: ["name", "query", "output-schema", "description"],
   })
-  .action(async (options: any) => {
+  .action(async (options: { name?: string; query?: string; outputSchema?: string; description?: string; taskId?: string; output?: string }) => {
     try {
       const client = getCliCoreClient();
       let quote: Quote;

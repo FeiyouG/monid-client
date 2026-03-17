@@ -49,5 +49,12 @@
   },
   "compilerOptions": {
     "lib": ["deno.window", "deno.unstable"]
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "require-await"
+      ]
+    }
   }
 }

@@ -2,7 +2,7 @@
  * Quote types for ScopeOS API
  */
 
-import { JSONSchema, TaskCreate } from "./task.ts";
+import type { JSONSchema, TaskCreate } from "./task.ts";
 
 // Price structure
 export interface Price {
@@ -43,7 +43,7 @@ const typeSuffix = new Map([
   ["PER_CALL", "per call"]
 ])
 
-export const formatPrice = (price: Price) => {
+export const formatPrice = (price: Price): string => {
   const unit = currencyUnit.get(price.currency) ?? price.currency;
   const suffix = typeSuffix.get(price.type) ?? price.type;
 
