@@ -14,50 +14,73 @@ A secure command-line interface for ScopeOS with OAuth authentication, Ed25519 k
 
 ## Installation
 
-### via npm (Recommended)
+### Production CLI (Stable)
 
-The easiest way to install ScopeOS CLI:
-
+**Quick Install (Recommended):**
 ```bash
-npm install -g @yourorg/scopeos-cli
+curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.sh | bash
 ```
 
-For development builds:
+This installs the latest stable release with production endpoints.
+
+**Manual Download:**
+Download the binary for your platform:
+- [Linux x64](https://github.com/FeiyouG/monid-client/releases/latest/download/scopeos-cli-linux-x64)
+- [macOS ARM64](https://github.com/FeiyouG/monid-client/releases/latest/download/scopeos-cli-macos-arm64)  
+- [Windows x64](https://github.com/FeiyouG/monid-client/releases/latest/download/scopeos-cli-windows-x64.exe)
+
+Then install manually:
 ```bash
-npm install -g @yourorg-dev/scopeos-cli@dev
+# Linux/macOS
+mkdir -p ~/.local/bin
+mv scopeos-cli-<platform> ~/.local/bin/scopeos-cli
+chmod +x ~/.local/bin/scopeos-cli
+
+# Add to PATH if needed
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Windows: Move to a directory in your PATH
+# Or add to PATH: System Properties → Environment Variables
 ```
 
-**Requirements**: Node.js 16.0.0 or higher
+### Nightly CLI (Pre-release)
 
-### Direct Binary Download
-
-Download pre-compiled binaries for your platform:
-
-**Linux x86_64:**
+For early access to unreleased features:
 ```bash
-curl -LO https://gitlab.com/yourorg/scopeos-cli/-/releases/latest/downloads/scopeos-cli-linux-x64
-chmod +x scopeos-cli-linux-x64
-sudo mv scopeos-cli-linux-x64 /usr/local/bin/scopeos-cli
+curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install-nightly.sh | bash
 ```
 
-**macOS ARM64 (M1/M2/M3):**
-```bash
-curl -LO https://gitlab.com/yourorg/scopeos-cli/-/releases/latest/downloads/scopeos-cli-macos-arm64
-chmod +x scopeos-cli-macos-arm64
-sudo mv scopeos-cli-macos-arm64 /usr/local/bin/scopeos-cli
-```
+This installs `scopeos-cli-nightly` (separate from production, can be installed side-by-side).
 
-**Windows x86_64:**
-Download from [GitLab Releases](https://gitlab.com/yourorg/scopeos-cli/-/releases/latest)
+**What's Nightly?**
+- Built automatically from every commit to `main`
+- Uses production API endpoints (safe to test)
+- Includes unreleased features and bug fixes
+- May be less stable than tagged releases
+
+**Manual Download:**
+- [Linux x64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/scopeos-cli-nightly-linux-x64)
+- [macOS ARM64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/scopeos-cli-nightly-macos-arm64)
+- [Windows x64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/scopeos-cli-nightly-windows-x64.exe)
 
 ### Verify Installation
-
 ```bash
-scopeos-cli --version
-scopeos-cli --help
+scopeos-cli --version          # Production: v1.0.0
+scopeos-cli-nightly --version  # Nightly: v1.0.0+abc1234
 ```
 
-**For detailed installation instructions and troubleshooting, see [DISTRIBUTION.md](DISTRIBUTION.md).**
+**Requirements**: None! Binaries are self-contained and work standalone.
+
+### Uninstall
+```bash
+# Remove binaries
+rm ~/.local/bin/scopeos-cli
+rm ~/.local/bin/scopeos-cli-nightly
+
+# Remove config (optional)
+rm -rf ~/.scopeos-cli
+```
 
 ### For Developers: Build from Source
 
@@ -65,15 +88,15 @@ scopeos-cli --help
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd agenticPayment-cli
+git clone https://github.com/FeiyouG/monid-client.git
+cd monid-client
 
-# Run directly
+# Run directly (uses .env for configuration)
 deno task dev
 
-# Or build binary
-./build.sh
-# Binary will be in ./dist/scopeos-cli
+# Or build binary locally
+deno task cli:build:local
+# Binary will be in ./dist/scopeos-cli-local
 ```
 
 ## Configuration
