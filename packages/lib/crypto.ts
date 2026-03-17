@@ -118,7 +118,7 @@ export async function encryptData(data: string, password: string): Promise<strin
   );
   
   // Use a fixed salt for simplicity (in production, store this separately)
-  const salt = encoder.encode("scopeos-cli-salt-v1");
+  const salt = encoder.encode("monid-cli-salt-v1");
   
   const key = await crypto.subtle.deriveKey(
     {
@@ -174,7 +174,7 @@ export async function decryptData(encryptedBase64: string, password: string): Pr
     ["deriveKey"]
   );
   
-  const salt = encoder.encode("scopeos-cli-salt-v1");
+  const salt = encoder.encode("monid-cli-salt-v1");
   
   const key = await crypto.subtle.deriveKey(
     {
@@ -207,5 +207,5 @@ export async function generateSystemPassword(): Promise<string> {
   
   // Combine username and hostname as password
   // In production, could also include machine ID
-  return `${username}@${hostname}:scopeos-cli`;
+  return `${username}@${hostname}:monid`;
 }

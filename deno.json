@@ -8,15 +8,15 @@
     "./packages/sdk"
   ],
   "tasks": {
-    "dev": "deno run --env-file=.env --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run packages/cli/main.ts",
-    
     "config:gen": "deno run --allow-env --allow-read --allow-write scripts/gen_config.ts",
     "config:gen:local": "deno run --allow-env --allow-read --allow-write --env-file=.env scripts/gen_config.ts",
     
-    "cli:dev": "deno run --env-file=.env --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run packages/cli/main.ts",
-    "cli:build:local": "deno run --allow-env --allow-read --allow-write --env-file=.env scripts/gen_config.ts && deno compile --no-check --allow-net --allow-read --allow-write --allow-env --allow-run --output dist/scopeos-cli-local packages/cli/main.compile.ts",
-    "cli:build:dev": "deno run --allow-env --allow-read --allow-write scripts/gen_config.ts && deno compile --no-check --allow-net --allow-read --allow-write --allow-env --allow-run --output dist/scopeos-cli-dev packages/cli/main.compile.ts",
-    "cli:build:prod": "deno run --allow-env --allow-read --allow-write scripts/gen_config.ts && deno compile --no-check --allow-net --allow-read --allow-write --allow-env --allow-run --output dist/scopeos-cli packages/cli/main.compile.ts",
+    "dev": "deno task config:gen:local && deno run --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run packages/cli/main.ts",
+    "cli:dev": "deno task config:gen:local && deno run --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run packages/cli/main.ts",
+    
+    "cli:build:local": "deno run --allow-env --allow-read --allow-write --env-file=.env scripts/gen_config.ts && deno compile --no-check --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run --output dist/monid-local packages/cli/main.compile.ts",
+    "cli:build:dev": "deno run --allow-env --allow-read --allow-write scripts/gen_config.ts && deno compile --no-check --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run --output dist/monid-dev packages/cli/main.compile.ts",
+    "cli:build:prod": "deno run --allow-env --allow-read --allow-write scripts/gen_config.ts && deno compile --no-check --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run --output dist/monid packages/cli/main.compile.ts",
     "cli:build": "deno task cli:build:prod",
     "cli:test": "deno test --allow-net --allow-read --allow-write --allow-env packages/cli/",
     
@@ -30,10 +30,10 @@
     "test:all": "deno task core:test && deno task cli:test && deno task sdk:test"
   },
   "imports": {
-    "@scopeos/core": "./packages/core/mod.ts",
-    "@scopeos/types": "./packages/types/mod.ts",
-    "@scopeos/lib": "./packages/lib/mod.ts",
-    "@scopeos/utils": "./packages/utils/mod.ts",
+    "@monid/core": "./packages/core/mod.ts",
+    "@monid/types": "./packages/types/mod.ts",
+    "@monid/lib": "./packages/lib/mod.ts",
+    "@monid/utils": "./packages/utils/mod.ts",
     "@std/assert": "jsr:@std/assert@1",
     "@std/cli": "jsr:@std/cli@1",
     "@std/path": "jsr:@std/path@1",

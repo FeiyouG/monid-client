@@ -7,7 +7,7 @@ export {
 } from "./polling.ts";
 
 // Config exports
-export { CONFIG } from "./config/mod.ts";
+export { CONFIG, VERSION } from "./config/mod.ts";
 export type { AppConfig } from "./config/mod.ts";
 
 // Command modules

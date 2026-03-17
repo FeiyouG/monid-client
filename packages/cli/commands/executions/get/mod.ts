@@ -78,8 +78,8 @@ export function displayExecutionResult(execution: Execution, outputFile?: string
   
   if (execution.status === "RUNNING" || execution.status === "READY") {
     info(`Execution is still ${execution.status.toLowerCase()}`);
-    info(`Check: scopeos-cli executions get --execution-id ${execution.executionId}`);
-    info(`Or wait: scopeos-cli executions get --execution-id ${execution.executionId} --wait`);
+    info(`Check: monid executions get --execution-id ${execution.executionId}`);
+    info(`Or wait: monid executions get --execution-id ${execution.executionId} --wait`);
     return;
   }
   

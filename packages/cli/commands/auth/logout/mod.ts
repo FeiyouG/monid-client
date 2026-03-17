@@ -6,7 +6,7 @@
 import { Command } from "@cliffy/command";
 import { Confirm } from "@cliffy/prompt";
 import { join } from "@std/path";
-import { CONFIG } from "@scopeos/core";
+import { CONFIG } from "@monid/core";
 import {
   deleteConfig,
   loadConfig,

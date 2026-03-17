@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# ScopeOS CLI Nightly Installer
+# Monid CLI Nightly Installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install-nightly.sh | bash
 
 # Colors for output
@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 REPO_OWNER="FeiyouG"
 REPO_NAME="monid-client"
-BINARY_NAME="scopeos-cli-nightly"
+BINARY_NAME="monid-nightly"
 INSTALL_DIR="$HOME/.local/bin"
 RELEASE_TAG="nightly"
 
@@ -129,14 +129,14 @@ ensure_path() {
                 SHELL_CONFIG="$HOME/.bash_profile"
             fi
             echo '' >> "$SHELL_CONFIG"
-            echo '# Added by ScopeOS CLI installer' >> "$SHELL_CONFIG"
+            echo '# Added by Monid CLI installer' >> "$SHELL_CONFIG"
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_CONFIG"
             log_success "Added to PATH in $SHELL_CONFIG"
             ;;
         zsh)
             SHELL_CONFIG="$HOME/.zshrc"
             echo '' >> "$SHELL_CONFIG"
-            echo '# Added by ScopeOS CLI installer' >> "$SHELL_CONFIG"
+            echo '# Added by Monid CLI installer' >> "$SHELL_CONFIG"
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_CONFIG"
             log_success "Added to PATH in $SHELL_CONFIG"
             ;;
@@ -165,7 +165,7 @@ verify_installation() {
     fi
     
     VERSION_OUTPUT=$("${INSTALL_DIR}/${BINARY_NAME}" --version 2>&1 || true)
-    log_success "Successfully installed ScopeOS CLI (nightly)"
+    log_success "Successfully installed Monid CLI (nightly)"
     echo ""
     echo "$VERSION_OUTPUT"
 }
@@ -210,10 +210,10 @@ print_next_steps() {
     echo "  ${BINARY_NAME} --help"
     echo ""
     
-    if command -v scopeos-cli &> /dev/null; then
+    if command -v monid &> /dev/null; then
         log_info "You also have the stable version installed:"
-        echo "  scopeos-cli          → stable release"
-        echo "  scopeos-cli-nightly  → nightly build"
+        echo "  monid                → stable release"
+        echo "  monid-nightly        → nightly build"
         echo ""
     fi
     
@@ -225,7 +225,7 @@ print_next_steps() {
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo -e "  ${MAGENTA}🌙 ScopeOS CLI Nightly Installer${NC}"
+    echo -e "  ${MAGENTA}🌙 Monid CLI Nightly Installer${NC}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     

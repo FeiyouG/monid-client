@@ -74,11 +74,11 @@ jobs:
             --no-check \
             --allow-net --allow-read --allow-write --allow-env --allow-run \
             --target x86_64-unknown-linux-gnu \
-            --output dist/scopeos-cli-verify \
+            --output dist/monid-verify \
             packages/cli/main.compile.ts
 
       - name: Test binary
-        run: dist/scopeos-cli-verify --version
+        run: dist/monid-verify --version
 
   build-nightly:
     name: Build Nightly (${{ matrix.platform }})
@@ -92,15 +92,15 @@ jobs:
           - platform: linux-x64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            output: scopeos-cli-nightly-linux-x64
+            output: monid-nightly-linux-x64
           - platform: macos-arm64
             os: macos-latest
             target: aarch64-apple-darwin
-            output: scopeos-cli-nightly-macos-arm64
+            output: monid-nightly-macos-arm64
           - platform: windows-x64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            output: scopeos-cli-nightly-windows-x64.exe
+            output: monid-nightly-windows-x64.exe
     steps:
       - uses: actions/checkout@v4
 
@@ -108,8 +108,17 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Set production environment
+      - name: Extract version info
+        id: version
         run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "version=nightly-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "Version: nightly-${SHORT_SHA}"
+        shell: bash
+
+      - name: Set environment variables
+        run: |
+          echo "VERSION=${{ steps.version.outputs.version }}" >> $GITHUB_ENV
           echo "OAUTH_DOMAIN=${{ vars.OAUTH_DOMAIN }}" >> $GITHUB_ENV
           echo "OAUTH_CLIENT_ID=${{ vars.OAUTH_CLIENT_ID }}" >> $GITHUB_ENV
           echo "API_ENDPOINT=${{ vars.API_ENDPOINT }}" >> $GITHUB_ENV
@@ -120,7 +129,7 @@ jobs:
         shell: bash
 
       - name: Generate config
-        run: deno run --allow-env --allow-read --allow-write scripts/gen_config.ts
+        run: deno task config:gen
 
       - name: Build binary
         shell: bash
@@ -208,15 +217,15 @@ jobs:
           - platform: linux-x64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            output: scopeos-cli-linux-x64
+            output: monid-linux-x64
           - platform: macos-arm64
             os: macos-latest
             target: aarch64-apple-darwin
-            output: scopeos-cli-macos-arm64
+            output: monid-macos-arm64
           - platform: windows-x64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            output: scopeos-cli-windows-x64.exe
+            output: monid-windows-x64.exe
     steps:
       - uses: actions/checkout@v4
 
@@ -224,8 +233,17 @@ jobs:
         with:
           deno-version: v2.x
 
-      - name: Set production environment
+      - name: Extract version from tag
+        id: version
         run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
+        shell: bash
+
+      - name: Set environment variables
+        run: |
+          echo "VERSION=${{ steps.version.outputs.version }}" >> $GITHUB_ENV
           echo "OAUTH_DOMAIN=${{ vars.OAUTH_DOMAIN }}" >> $GITHUB_ENV
           echo "OAUTH_CLIENT_ID=${{ vars.OAUTH_CLIENT_ID }}" >> $GITHUB_ENV
           echo "API_ENDPOINT=${{ vars.API_ENDPOINT }}" >> $GITHUB_ENV
@@ -236,7 +254,7 @@ jobs:
         shell: bash
 
       - name: Generate config
-        run: deno run --allow-env --allow-read --allow-write scripts/gen_config.ts
+        run: deno task config:gen
 
       - name: Build binary
         shell: bash

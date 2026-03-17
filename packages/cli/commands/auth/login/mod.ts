@@ -96,7 +96,7 @@ export const loginCommand = new Command()
         }
         console.log("");
         console.log(
-          "Next step: Generate an API key with 'scopeos-cli keys generate --label <your-key-name>'"
+          "Next step: Generate an API key with 'monid keys generate --label <your-key-name>'"
         );
       } catch (workspaceError) {
         // Workspace selection failed - clear credentials

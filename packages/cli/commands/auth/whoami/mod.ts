@@ -17,7 +17,7 @@ export const whoamiCommand = new Command()
       const config = await loadConfig();
 
       if (!config || !config.workspace) {
-        error("Not authenticated. Run 'scopeos-cli auth login' first.");
+        error("Not authenticated. Run 'monid auth login' first.");
         Deno.exit(1);
       }
 

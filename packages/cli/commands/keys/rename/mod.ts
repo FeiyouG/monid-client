@@ -23,13 +23,13 @@ export const renameCommand = new Command()
       const identifier = options.oldLabel || options.oldFingerprint;
       if (!identifier) {
         error("Please provide --old-label or --old-fingerprint");
-        console.log("Example: scopeos-cli keys rename --old-label old-name --new-label new-name");
+        console.log("Example: monid keys rename --old-label old-name --new-label new-name");
         Deno.exit(1);
       }
       
       const config = await loadConfig();
       if (!config || !config.workspace) {
-        error("Not authenticated. Run 'scopeos-cli auth login' first.");
+        error("Not authenticated. Run 'monid auth login' first.");
         Deno.exit(1);
       }
       
@@ -42,7 +42,7 @@ export const renameCommand = new Command()
       // Check collision
       if (config.keys.some(k => k.label === options.newLabel)) {
         error(`Key with label '${options.newLabel}' already exists`);
-        console.log("Use 'scopeos-cli keys list' to see existing keys.");
+        console.log("Use 'monid keys list' to see existing keys.");
         Deno.exit(1);
       }
       

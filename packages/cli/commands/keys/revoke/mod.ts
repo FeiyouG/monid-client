@@ -8,7 +8,7 @@ import { loadConfig, saveConfig } from "../../../../lib/config.ts";
 import { getAccessToken } from "../../../../lib/credentials.ts";
 import { findKeyByLabelOrFingerprint } from "../../../../utils/fingerprint.ts";
 import { error, info, success } from "../../../../utils/display.ts";
-import { CONFIG } from "@scopeos/core";
+import { CONFIG } from "@monid/core";
 
 export const revokeCommand = new Command()
   .name("revoke")
@@ -33,7 +33,7 @@ export const revokeCommand = new Command()
 
         const config = await loadConfig();
         if (!config || !config.workspace) {
-          error("Not authenticated. Run 'scopeos-cli auth login' first.");
+          error("Not authenticated. Run 'monid auth login' first.");
           Deno.exit(1);
         }
 
@@ -51,7 +51,7 @@ export const revokeCommand = new Command()
         const accessToken = await getAccessToken();
         if (!accessToken) {
           error(
-            "Authentication expired. Please run 'scopeos-cli auth login' first.",
+            "Authentication expired. Please run 'monid auth login' first.",
           );
           Deno.exit(1);
         }

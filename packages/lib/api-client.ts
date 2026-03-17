@@ -2,7 +2,7 @@
  * Centralized API client with signature-based authentication
  */
 
-import { CONFIG } from "@scopeos/core";
+import { CONFIG } from "@monid/core";
 import { loadConfig } from "./config.ts";
 import { getAccessToken } from "./credentials.ts";
 import { signRequest } from "./signing.ts";
@@ -29,7 +29,7 @@ export async function makeAuthenticatedRequest<T>(
 ): Promise<T> {
   const config = await loadConfig();
   if (!config || !config.workspace) {
-    throw new Error("Not authenticated. Run 'scopeos-cli auth login' first.");
+    throw new Error("Not authenticated. Run 'monid auth login' first.");
   }
 
   const url = `${CONFIG.api.endpoint}${path}`;
@@ -65,7 +65,7 @@ export async function makeAuthenticatedRequest<T>(
   if (!useSignature) {
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      throw new Error("Authentication required. Run 'scopeos-cli auth login' first.");
+      throw new Error("Authentication required. Run 'monid auth login' first.");
     }
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
@@ -121,7 +121,7 @@ async function handleApiError(response: Response): Promise<never> {
 
   // Special handling for common errors
   if (response.status === 401) {
-    throw new Error(`${fullMessage}\n\nAuthentication expired. Run 'scopeos-cli auth login' to re-authenticate.`);
+    throw new Error(`${fullMessage}\n\nAuthentication expired. Run 'monid auth login' to re-authenticate.`);
   }
 
   if (response.status === 403) {

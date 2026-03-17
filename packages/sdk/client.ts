@@ -1,11 +1,11 @@
-import { CONFIG } from "@scopeos/core";
+import { CONFIG } from "@monid/core";
 import {
   CoreClient,
   type CoreRequestOptions,
   type CoreTransport,
   type SearchInput,
   type TaskUpdateInput,
-} from "@scopeos/core";
+} from "@monid/core";
 import type {
   Execution,
   ExecutionsListResponse,
@@ -13,7 +13,7 @@ import type {
   Task,
   TaskCreate,
   TasksListResponse,
-} from "@scopeos/types";
+} from "@monid/types";
 
 export interface ClientOptions {
   apiKey?: string;

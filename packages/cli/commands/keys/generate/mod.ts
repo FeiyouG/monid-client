@@ -31,7 +31,7 @@ import {
   info,
   success,
 } from "../../../../utils/display.ts";
-import { CONFIG } from "@scopeos/core";
+import { CONFIG } from "@monid/core";
 
 export const generateCommand = new Command()
   .name("generate")
@@ -49,7 +49,7 @@ export const generateCommand = new Command()
       const accessToken = await getAccessToken();
       if (!accessToken) {
         error(
-          "Authentication expired. Please run 'scopeos-cli auth login' first.",
+          "Authentication expired. Please run 'monid auth login' first.",
         );
         Deno.exit(1);
       }
@@ -61,7 +61,7 @@ export const generateCommand = new Command()
       const config = await loadConfig();
       if (!config) {
         error(
-          "Configuration error. Please run 'scopeos-cli auth login' first.",
+          "Configuration error. Please run 'monid auth login' first.",
         );
         Deno.exit(1);
       }
@@ -70,7 +70,7 @@ export const generateCommand = new Command()
       if (config.keys.find((k) => k.label === label)) {
         error(`Key with label '${label}' already exists.`);
         console.log(
-          "Use 'scopeos-cli keys list' to see existing keys or 'scopeos-cli keys rename' to rename an existing key.",
+          "Use 'monid keys list' to see existing keys or 'monid keys rename' to rename an existing key.",
         );
         Deno.exit(1);
       }

@@ -1,5 +1,5 @@
 /**
- * Search/Execution types for ScopeOS API
+ * Search/Execution types for Monid API
  */
 
 import type { Price } from "./quote.ts";

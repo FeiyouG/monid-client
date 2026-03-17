@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# ScopeOS CLI Production Installer
+# Monid CLI Production Installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.sh | bash
 
 # Colors for output
@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 # Configuration
 REPO_OWNER="FeiyouG"
 REPO_NAME="monid-client"
-BINARY_NAME="scopeos-cli"
+BINARY_NAME="monid"
 INSTALL_DIR="$HOME/.local/bin"
 
 # Functions
@@ -138,14 +138,14 @@ ensure_path() {
                 SHELL_CONFIG="$HOME/.bash_profile"
             fi
             echo '' >> "$SHELL_CONFIG"
-            echo '# Added by ScopeOS CLI installer' >> "$SHELL_CONFIG"
+            echo '# Added by Monid CLI installer' >> "$SHELL_CONFIG"
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_CONFIG"
             log_success "Added to PATH in $SHELL_CONFIG"
             ;;
         zsh)
             SHELL_CONFIG="$HOME/.zshrc"
             echo '' >> "$SHELL_CONFIG"
-            echo '# Added by ScopeOS CLI installer' >> "$SHELL_CONFIG"
+            echo '# Added by Monid CLI installer' >> "$SHELL_CONFIG"
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_CONFIG"
             log_success "Added to PATH in $SHELL_CONFIG"
             ;;
@@ -174,7 +174,7 @@ verify_installation() {
     fi
     
     VERSION_OUTPUT=$("${INSTALL_DIR}/${BINARY_NAME}" --version 2>&1 || true)
-    log_success "Successfully installed ScopeOS CLI"
+    log_success "Successfully installed Monid CLI"
     echo ""
     echo "$VERSION_OUTPUT"
 }
@@ -216,7 +216,7 @@ print_next_steps() {
 main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  ScopeOS CLI Installer"
+    echo "  Monid CLI Installer"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     

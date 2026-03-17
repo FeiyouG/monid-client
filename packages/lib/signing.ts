@@ -37,11 +37,11 @@ export async function signRequest(
   // Load config
   const config = await loadConfig();
   if (!config || !config.workspace) {
-    throw new Error("Not authenticated. Run 'scopeos-cli auth login' first.");
+    throw new Error("Not authenticated. Run 'monid auth login' first.");
   }
   
   if (!config.activated_key) {
-    throw new Error("No active key. Generate one with 'scopeos-cli keys generate --label <name>'");
+    throw new Error("No active key. Generate one with 'monid keys generate --label <name>'");
   }
   
   // Find activated key

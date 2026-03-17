@@ -1,5 +1,5 @@
 {
-  "name": "@feiyoug/scopeos-sdk",
+  "name": "@monid/sdk",
   "version": "0.1.0",
   "exports": "./mod.ts",
   "license": "MIT",

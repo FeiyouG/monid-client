@@ -4,8 +4,8 @@
 
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { crypto } from "@std/crypto/crypto";
-import { CONFIG } from "@scopeos/core";
-import type { OAuthTokenResponse } from "@scopeos/types";
+import { CONFIG } from "@monid/core";
+import type { OAuthTokenResponse } from "@monid/types";
 
 // Generate code verifier (random string for PKCE)
 export function generateCodeVerifier(): string {
@@ -130,7 +130,7 @@ export async function startCallbackServer(): Promise<{ port: number, promise: Pr
           <html>
             <title>Authentication Successful</title>
             <body>
-              <h1>ScopeOS Authentication successful!</h1>
+              <h1>Monid Authentication successful!</h1>
               <p>You can close this window and return to the CLI.</p>
             </body>
           </html>

@@ -29,7 +29,7 @@ export const listCommand = new Command()
       if (items.length === 0) {
         console.log("");
         console.log("No executions found. Start one with:");
-        console.log("  scopeos-cli search --task-id <task-id>");
+        console.log("  monid search --task-id <task-id>");
         return;
       }
 

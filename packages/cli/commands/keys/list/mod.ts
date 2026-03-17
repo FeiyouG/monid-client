@@ -15,13 +15,13 @@ export const listCommand = new Command()
     try {
       const config = await loadConfig();
       if (!config || !config.workspace) {
-        error("Not authenticated. Run 'scopeos-cli auth login' first.");
+        error("Not authenticated. Run 'monid auth login' first.");
         Deno.exit(1);
       }
 
       if (config.keys.length === 0) {
         console.log("No keys found. Generate one with:");
-        console.log("  scopeos-cli keys generate --label <name>");
+        console.log("  monid keys generate --label <name>");
         return;
       }
 

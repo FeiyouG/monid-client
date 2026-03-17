@@ -21,21 +21,21 @@ export const activateCommand = new Command()
       const identifier = options.label || options.fingerprint;
       if (!identifier) {
         error("Please provide --label or --fingerprint");
-        console.log("Example: scopeos-cli keys activate --label my-key");
-        console.log("Example: scopeos-cli keys activate --fingerprint 5afc1bc");
+        console.log("Example: monid keys activate --label my-key");
+        console.log("Example: monid keys activate --fingerprint 5afc1bc");
         Deno.exit(1);
       }
       
       const config = await loadConfig();
       if (!config || !config.workspace) {
-        error("Not authenticated. Run 'scopeos-cli auth login' first.");
+        error("Not authenticated. Run 'monid auth login' first.");
         Deno.exit(1);
       }
       
       const targetKey = findKeyByLabelOrFingerprint(config.keys, identifier);
       if (!targetKey) {
         error(`Key '${identifier}' not found`);
-        info("Run 'scopeos-cli keys list' to see available keys");
+        info("Run 'monid keys list' to see available keys");
         Deno.exit(1);
       }
       
@@ -43,7 +43,7 @@ export const activateCommand = new Command()
       if (targetKey.status === "REVOKED") {
         error(`Cannot activate revoked key '${targetKey.label}'`);
         info("This key has been revoked on the server");
-        info("Generate a new key with 'scopeos-cli keys generate --label <name>'");
+        info("Generate a new key with 'monid keys generate --label <name>'");
         Deno.exit(1);
       }
       
@@ -53,7 +53,7 @@ export const activateCommand = new Command()
         if (expiryDate < new Date()) {
           error(`Cannot activate expired key '${targetKey.label}'`);
           info(`This key expired on ${expiryDate.toLocaleString()}`);
-          info("Generate a new key with 'scopeos-cli keys generate --label <name>'");
+          info("Generate a new key with 'monid keys generate --label <name>'");
           Deno.exit(1);
         }
       }

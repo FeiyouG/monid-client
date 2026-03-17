@@ -2,11 +2,11 @@
  * Workspace selection and management utilities
  */
 
-import { CONFIG } from "@scopeos/core";
+import { CONFIG } from "@monid/core";
 import { loadConfig, saveConfig } from "./config.ts";
-import { promptWorkspaceSelection } from "@scopeos/utils";
-import { info, success } from "@scopeos/utils";
-import type { WorkspaceSummary, WorkspacesResponse } from "@scopeos/types";
+import { promptWorkspaceSelection } from "@monid/utils";
+import { info, success } from "@monid/utils";
+import type { WorkspaceSummary, WorkspacesResponse } from "@monid/types";
 
 /**
  * Fetches available workspaces from the backend

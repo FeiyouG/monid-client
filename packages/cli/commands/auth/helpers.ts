@@ -2,8 +2,8 @@
  * Shared utilities for auth commands
  */
 
-import { CONFIG } from "@scopeos/core";
-import type { UserInfo } from "@scopeos/types";
+import { CONFIG } from "@monid/core";
+import type { UserInfo } from "@monid/types";
 
 /**
  * Fetch user information from OAuth userinfo endpoint

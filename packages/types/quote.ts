@@ -1,5 +1,5 @@
 /**
- * Quote types for ScopeOS API
+ * Quote types for Monid API
  */
 
 import type { JSONSchema, TaskCreate } from "./task.ts";

@@ -9,7 +9,7 @@ import { getKeysDir, loadConfig, saveConfig } from "../../../../lib/config.ts";
 import { getAccessToken } from "../../../../lib/credentials.ts";
 import { findKeyByLabelOrFingerprint } from "../../../../utils/fingerprint.ts";
 import { error, info, success, warning } from "../../../../utils/display.ts";
-import { CONFIG } from "@scopeos/core";
+import { CONFIG } from "@monid/core";
 
 export const deleteCommand = new Command()
   .name("delete")
@@ -34,7 +34,7 @@ export const deleteCommand = new Command()
 
         const config = await loadConfig();
         if (!config || !config.workspace) {
-          error("Not authenticated. Run 'scopeos-cli auth login' first.");
+          error("Not authenticated. Run 'monid auth login' first.");
           Deno.exit(1);
         }
 

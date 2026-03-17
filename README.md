@@ -1,6 +1,6 @@
-# ScopeOS CLI
+# Monid CLI
 
-A secure command-line interface for ScopeOS with OAuth authentication, Ed25519 key-based request signing, and API proxy capabilities.
+A secure command-line interface for Monid with OAuth authentication, Ed25519 key-based request signing, and API proxy capabilities.
 
 ## Features
 
@@ -9,7 +9,7 @@ A secure command-line interface for ScopeOS with OAuth authentication, Ed25519 k
 - **SSH-Style Fingerprints**: Industry-standard `SHA256:{base64}` key fingerprints
 - **Automatic Key Registration**: Seamlessly register keys with the backend
 - **Request Signing**: Sign all API requests with Ed25519 signatures
-- **Proxy Command**: Route requests through `proxy.scopeos.xyz` with automatic signing
+- **Proxy Command**: Route requests through `proxy.monid.ai` with automatic signing
 - **Secure Storage**: Private keys encrypted and stored locally (never transmitted)
 
 ## Installation
@@ -25,16 +25,16 @@ This installs the latest stable release with production endpoints.
 
 **Manual Download:**
 Download the binary for your platform:
-- [Linux x64](https://github.com/FeiyouG/monid-client/releases/latest/download/scopeos-cli-linux-x64)
-- [macOS ARM64](https://github.com/FeiyouG/monid-client/releases/latest/download/scopeos-cli-macos-arm64)  
-- [Windows x64](https://github.com/FeiyouG/monid-client/releases/latest/download/scopeos-cli-windows-x64.exe)
+- [Linux x64](https://github.com/FeiyouG/monid-client/releases/latest/download/monid-linux-x64)
+- [macOS ARM64](https://github.com/FeiyouG/monid-client/releases/latest/download/monid-macos-arm64)  
+- [Windows x64](https://github.com/FeiyouG/monid-client/releases/latest/download/monid-windows-x64.exe)
 
 Then install manually:
 ```bash
 # Linux/macOS
 mkdir -p ~/.local/bin
-mv scopeos-cli-<platform> ~/.local/bin/scopeos-cli
-chmod +x ~/.local/bin/scopeos-cli
+mv monid-<platform> ~/.local/bin/monid
+chmod +x ~/.local/bin/monid
 
 # Add to PATH if needed
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
@@ -51,7 +51,7 @@ For early access to unreleased features:
 curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install-nightly.sh | bash
 ```
 
-This installs `scopeos-cli-nightly` (separate from production, can be installed side-by-side).
+This installs `monid-nightly` (separate from production, can be installed side-by-side).
 
 **What's Nightly?**
 - Built automatically from every commit to `main`
@@ -60,14 +60,14 @@ This installs `scopeos-cli-nightly` (separate from production, can be installed 
 - May be less stable than tagged releases
 
 **Manual Download:**
-- [Linux x64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/scopeos-cli-nightly-linux-x64)
-- [macOS ARM64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/scopeos-cli-nightly-macos-arm64)
-- [Windows x64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/scopeos-cli-nightly-windows-x64.exe)
+- [Linux x64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/monid-nightly-linux-x64)
+- [macOS ARM64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/monid-nightly-macos-arm64)
+- [Windows x64 (Nightly)](https://github.com/FeiyouG/monid-client/releases/download/nightly/monid-nightly-windows-x64.exe)
 
 ### Verify Installation
 ```bash
-scopeos-cli --version          # Production: v1.0.0
-scopeos-cli-nightly --version  # Nightly: v1.0.0+abc1234
+monid --version          # Production: v1.0.0
+monid-nightly --version  # Nightly: v1.0.0+abc1234
 ```
 
 **Requirements**: None! Binaries are self-contained and work standalone.
@@ -75,11 +75,11 @@ scopeos-cli-nightly --version  # Nightly: v1.0.0+abc1234
 ### Uninstall
 ```bash
 # Remove binaries
-rm ~/.local/bin/scopeos-cli
-rm ~/.local/bin/scopeos-cli-nightly
+rm ~/.local/bin/monid
+rm ~/.local/bin/monid-nightly
 
 # Remove config (optional)
-rm -rf ~/.scopeos-cli
+rm -rf ~/.monid
 ```
 
 ### For Developers: Build from Source
@@ -91,17 +91,28 @@ rm -rf ~/.scopeos-cli
 git clone https://github.com/FeiyouG/monid-client.git
 cd monid-client
 
-# Run directly (uses .env for configuration)
-deno task dev
+# Create .env file (see Configuration section below)
+cp .env.template .env
+# Edit .env with your values (including VERSION for local builds)
+
+# Run CLI with convenient dev task (auto-generates config)
+deno task dev auth login
 
 # Or build binary locally
 deno task cli:build:local
-# Binary will be in ./dist/scopeos-cli-local
+# Binary will be in ./dist/monid-local
 ```
+
+**Configuration System**:
+- The CLI uses a **generated config** system (not runtime env vars)
+- Run `deno task config:gen:local` whenever you change `.env`
+- This generates `packages/core/config/generated.ts` with hardcoded values
+- Both dev runs and compiled binaries use this generated config
+- Ensures dev environment matches production behavior
 
 ## Configuration
 
-Before building, configure the following environment variables in `.env`:
+Configure the following environment variables in `.env`:
 
 ```bash
 # OAuth Provider Configuration
@@ -110,9 +121,9 @@ OAUTH_CLIENT_ID=your_oauth_client_id
 OAUTH_TYPE=clerk
 
 # Backend API Configuration
-API_ENDPOINT=https://api.scopeos.xyz
-PROXY_ENDPOINT=https://proxy.scopeos.xyz
-DASHBOARD_URL=https://scopeos.xyz
+API_ENDPOINT=https://api.monid.ai
+PROXY_ENDPOINT=https://proxy.monid.ai
+DASHBOARD_URL=https://monid.ai
 
 # OAuth Flow Configuration
 OAUTH_REDIRECT_URI=http://localhost:8918/callback
@@ -125,21 +136,21 @@ OAUTH_SCOPES=profile email openid
 
 #### Login
 ```bash
-scopeos-cli auth login
+monid auth login
 ```
 
 Opens your browser for OAuth authentication. After successful login, your workspace information is saved locally.
 
 #### Check status
 ```bash
-scopeos-cli auth whoami
+monid auth whoami
 ```
 
 Displays your current authentication status, workspace, and active key.
 
 #### Logout
 ```bash
-scopeos-cli auth logout
+monid auth logout
 ```
 
 Clears all local credentials and configuration.
@@ -148,28 +159,28 @@ Clears all local credentials and configuration.
 
 #### Generate a new key
 ```bash
-scopeos-cli keys generate --label "my-production-key"
+monid keys generate --label "my-production-key"
 ```
 
 Generates an Ed25519 key pair, encrypts the private key locally, and automatically registers the public key with the backend.
 
 #### List keys
 ```bash
-scopeos-cli keys list
+monid keys list
 ```
 
 Shows all keys for your current workspace. The activated key is marked with `*`.
 
 #### Activate a key
 ```bash
-scopeos-cli keys activate my-production-key
+monid keys activate my-production-key
 ```
 
 Sets the specified key as the active key for signing requests.
 
 #### Delete a key
 ```bash
-scopeos-cli keys delete my-old-key
+monid keys delete my-old-key
 ```
 
 Deletes a key from local storage. Note: This doesn't revoke the key on the backend - use the dashboard for that.
@@ -180,7 +191,7 @@ Tasks define reusable search templates with input/output schemas and capabilitie
 
 #### Create a task
 ```bash
-scopeos-cli tasks create \
+monid tasks create \
   --title "Company Research" \
   --description "Research company information from web sources" \
   --input-schema '{"type":"object","properties":{"company":{"type":"string"}},"required":["company"]}' \
@@ -190,7 +201,7 @@ scopeos-cli tasks create \
 
 Or use schema files:
 ```bash
-scopeos-cli tasks create \
+monid tasks create \
   --title "Company Research" \
   --description "Research companies" \
   --input-schema ./schemas/input.json \
@@ -200,26 +211,26 @@ scopeos-cli tasks create \
 
 #### List tasks
 ```bash
-scopeos-cli tasks list
-scopeos-cli tasks list --limit 20
-scopeos-cli tasks list --cursor <cursor-from-previous-page>
+monid tasks list
+monid tasks list --limit 20
+monid tasks list --cursor <cursor-from-previous-page>
 ```
 
 #### Get task details
 ```bash
-scopeos-cli tasks get 01JBXX...
+monid tasks get 01JBXX...
 ```
 
 #### Update a task
 ```bash
-scopeos-cli tasks update 01JBXX... --title "Updated Title"
-scopeos-cli tasks update 01JBXX... --description "New description" --input-schema input.json
+monid tasks update 01JBXX... --title "Updated Title"
+monid tasks update 01JBXX... --description "New description" --input-schema input.json
 ```
 
 #### Delete a task
 ```bash
-scopeos-cli tasks delete 01JBXX...
-scopeos-cli tasks delete 01JBXX... -y  # Skip confirmation
+monid tasks delete 01JBXX...
+monid tasks delete 01JBXX... -y  # Skip confirmation
 ```
 
 ### Price Quotes
@@ -228,8 +239,8 @@ Get price quotes before executing searches.
 
 #### Create a quote
 ```bash
-scopeos-cli quotes create 01JBXX... --input '{"company":"Acme Corp"}'
-scopeos-cli quotes create 01JBXX... --input input.json
+monid quotes create 01JBXX... --input '{"company":"Acme Corp"}'
+monid quotes create 01JBXX... --input input.json
 ```
 
 The quote shows estimated pricing and expires after 1 hour (configurable).
@@ -241,62 +252,62 @@ Execute searches using natural language queries or task-based workflows.
 #### Quick search (creates task, quote, and executes)
 ```bash
 # Execute and return immediately
-scopeos-cli searches "Find information about Acme Corp"
+monid searches "Find information about Acme Corp"
 
 # Wait for completion and save results
-scopeos-cli searches "Research Tesla's latest products" --wait --output results.json
+monid searches "Research Tesla's latest products" --wait --output results.json
 
 # Custom output schema
-scopeos-cli searches "Company research" --output-schema schema.json --wait
+monid searches "Company research" --output-schema schema.json --wait
 ```
 
 #### Check execution status
 ```bash
-scopeos-cli searches check 01JBXZ...
-scopeos-cli execution get 01JBXZ...
-scopeos-cli execution get 01JBXZ... --wait  # Poll until completion
+monid searches check 01JBXZ...
+monid execution get 01JBXZ...
+monid execution get 01JBXZ... --wait  # Poll until completion
 ```
 
 #### Save results to file
 ```bash
-scopeos-cli execution get 01JBXZ... --output results.json
+monid execution get 01JBXZ... --output results.json
 ```
 
 ### Making API Requests (Legacy Proxy)
 
 #### Basic GET request
 ```bash
-scopeos-cli proxy my-api-slug /users
+monid proxy my-api-slug /users
 ```
 
 #### POST request with data
 ```bash
-scopeos-cli proxy my-api-slug /users --method POST --data '{"name":"Alice","email":"alice@example.com"}'
+monid proxy my-api-slug /users --method POST --data '{"name":"Alice","email":"alice@example.com"}'
 ```
 
 #### PUT request
 ```bash
-scopeos-cli proxy my-api-slug /users/123 --method PUT --data '{"name":"Alice Updated"}'
+monid proxy my-api-slug /users/123 --method PUT --data '{"name":"Alice Updated"}'
 ```
 
 #### DELETE request
 ```bash
-scopeos-cli proxy my-api-slug /users/123 --method DELETE
+monid proxy my-api-slug /users/123 --method DELETE
 ```
 
 #### With custom headers
 ```bash
-scopeos-cli proxy my-api-slug /users --header "X-Custom-Header: value" --header "X-Another: value"
+monid proxy my-api-slug /users --header "X-Custom-Header: value" --header "X-Another: value"
 ```
 
 #### Verbose mode (show signature details)
 ```bash
-scopeos-cli proxy my-api-slug /users --verbose
+monid proxy my-api-slug /users --verbose
 ```
 
 #### Save response to file
 ```bash
-scopeos-cli proxy my-api-slug /users --output response.json
+monid proxy my-api-slug /users --output response.json
 ```
 
 ## How It Works
@@ -310,7 +321,7 @@ scopeos-cli proxy my-api-slug /users --output response.json
 5. Provider redirects to `http://localhost:8918/callback?code=xxx`
 6. CLI exchanges code for access token
 7. CLI fetches workspace info from `/v1/auth/whoami`
-8. Workspace and user info saved to `~/.scopeos-cli/config.yaml`
+8. Workspace and user info saved to `~/.monid/config.yaml`
 
 ### Key Generation Flow
 
@@ -318,7 +329,7 @@ scopeos-cli proxy my-api-slug /users --output response.json
 2. CLI generates Ed25519 key pair using Web Crypto API
 3. CLI computes SSH-style fingerprint: `SHA256:{base64(sha256(public_key))}`
 4. Private key is encrypted with AES-GCM (password derived from system)
-5. Encrypted private key saved to `~/.scopeos-cli/keys/{workspace_id}/{label}`
+5. Encrypted private key saved to `~/.monid/keys/{workspace_id}/{label}`
 6. Public key automatically registered with backend (`POST /v1/verification-keys`)
 7. Key info added to config and set as activated key
 
@@ -351,7 +362,7 @@ scopeos-cli proxy my-api-slug /users --output response.json
 ## Directory Structure
 
 ```
-~/.scopeos-cli/
+~/.monid/
 ├── config.yaml              # Workspace configuration
 ├── credentials              # Encrypted OAuth tokens (temporary)
 └── keys/
@@ -571,13 +582,13 @@ deno task dev
 ## Troubleshooting
 
 ### "Authentication expired" error
-Run `scopeos-cli auth login` to refresh your OAuth tokens.
+Run `monid auth login` to refresh your OAuth tokens.
 
 ### "No active key" error
-Generate a key with `scopeos-cli keys generate --label my-key`.
+Generate a key with `monid keys generate --label my-key`.
 
 ### "Key not found" error
-Check your keys with `scopeos-cli keys list` and activate one with `scopeos-cli keys activate <label>`.
+Check your keys with `monid keys list` and activate one with `monid keys activate <label>`.
 
 ### Browser doesn't open during login
 The authorization URL is displayed in the terminal. Copy and paste it into your browser manually.
@@ -599,5 +610,5 @@ Contributions are welcome! Please ensure all tests pass before submitting a PR.
 
 For issues and questions:
 - GitHub Issues: [repository-url]/issues
-- Documentation: https://scopeos.xyz/docs
-- Dashboard: https://scopeos.xyz/dashboard/verification-keys
+- Documentation: https://monid.ai/docs
+- Dashboard: https://monid.ai/dashboard/verification-keys

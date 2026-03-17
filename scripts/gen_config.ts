@@ -12,6 +12,7 @@
  *   deno task config:gen:local        # Generate from .env file
  *   
  * Required Environment Variables:
+ *   - VERSION
  *   - OAUTH_DOMAIN
  *   - OAUTH_CLIENT_ID
  *   - OAUTH_TYPE
@@ -22,6 +23,7 @@
  */
 
 const REQUIRED_VARS = [
+  "VERSION",
   "OAUTH_DOMAIN",
   "OAUTH_CLIENT_ID",
   "OAUTH_TYPE",
@@ -52,6 +54,7 @@ if (missingVars.length > 0) {
   console.error("\nPlease set these variables in your environment or .env file.");
   console.error("\nExample .env file:");
   console.error(`
+VERSION=0.1.0
 OAUTH_DOMAIN=your-app.clerk.accounts.dev
 OAUTH_CLIENT_ID=your_client_id
 OAUTH_TYPE=clerk
@@ -81,6 +84,8 @@ const configFileContent = `import type { AppConfig } from "./types.ts";
  * Values are captured from environment variables at build time.
  */
 
+export const VERSION = "${config.VERSION}";
+
 export const CONFIG: AppConfig = {
   oauth: {
     domain: "${config.OAUTH_DOMAIN}",
@@ -102,6 +107,7 @@ await Deno.writeTextFile(outputPath, configFileContent);
 
 console.log("✓ Generated build configuration:");
 console.log(`  Output: ${outputPath}`);
+console.log(`  Version: ${config.VERSION}`);
 console.log(`  OAuth Domain: ${config.OAUTH_DOMAIN}`);
 console.log(`  OAuth Client ID: ${config.OAUTH_CLIENT_ID}`);
 console.log(`  API Endpoint: ${config.API_ENDPOINT}`);

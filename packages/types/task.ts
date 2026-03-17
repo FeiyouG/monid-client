@@ -1,5 +1,5 @@
 /**
- * Task types for ScopeOS API
+ * Task types for Monid API
  */
 
 // JSON Schema type (simplified)

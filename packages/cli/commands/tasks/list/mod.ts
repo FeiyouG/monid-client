@@ -25,7 +25,7 @@ export const listCommand = new Command()
       if (response.items.length === 0) {
         console.log("");
         console.log("No tasks found. Create one with:");
-        console.log("  scopeos-cli tasks create --name '...' --query '...' --output-schema schema.json");
+        console.log("  monid tasks create --name '...' --query '...' --output-schema schema.json");
         return;
       }
       

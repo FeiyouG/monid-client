@@ -77,7 +77,7 @@ export const searchCommand = new Command()
         console.log(`Status: ${statusBadge(result.execution.status)}`);
         console.log("");
         info(
-          `Check: scopeos-cli executions get --execution-id ${result.execution.executionId}`,
+          `Check: monid executions get --execution-id ${result.execution.executionId}`,
         );
       }
     } catch (err) {
