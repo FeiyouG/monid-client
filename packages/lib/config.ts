@@ -31,15 +31,16 @@ export async function loadConfig(): Promise<Config | null> {
     const content = await Deno.readTextFile(CONFIG_FILE);
     const config = parse(content) as Config;
     
-    // Migration: add fingerprint_short to existing keys
+    // Add fingerprint_short to existing keys if missing
     if (config?.keys) {
       let needsSave = false;
       for (const key of config.keys) {
-        if (!key.fingerprint_short && key.fingerprint) {
+        if ('fingerprint' in key && !key.fingerprint_short) {
           key.fingerprint_short = getShortFingerprint(key.fingerprint);
           needsSave = true;
         }
       }
+      
       if (needsSave) {
         await saveConfig(config);
       }

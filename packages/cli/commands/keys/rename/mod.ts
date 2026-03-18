@@ -28,21 +28,35 @@ export const renameCommand = new Command()
       }
       
       const config = await loadConfig();
-      if (!config || !config.workspace) {
-        error("Not authenticated. Run 'monid auth login' first.");
+      if (!config) {
+        error("No configuration found");
         Deno.exit(1);
       }
       
-      const targetKey = findKeyByLabelOrFingerprint(config.keys, identifier);
+      // Check for duplicate new label across all keys
+      const allLabels = config.keys.map(k => k.label);
+      
+      if (allLabels.includes(options.newLabel)) {
+        error(`A key with label '${options.newLabel}' already exists`);
+        console.log("Use 'monid keys list' to see existing keys.");
+        Deno.exit(1);
+      }
+      
+      // Find key by label or fingerprint
+      let targetKey;
+      
+      if (options.oldLabel) {
+        targetKey = config.keys.find(k => k.label === options.oldLabel);
+      } else if (options.oldFingerprint) {
+        // Only verification keys have fingerprints
+        targetKey = config.keys.find(k => 
+          k.type === "verification" && 
+          (k.fingerprint === options.oldFingerprint || k.fingerprint_short === options.oldFingerprint)
+        );
+      }
+      
       if (!targetKey) {
         error(`Key '${identifier}' not found`);
-        Deno.exit(1);
-      }
-      
-      // Check collision
-      if (config.keys.some(k => k.label === options.newLabel)) {
-        error(`Key with label '${options.newLabel}' already exists`);
-        console.log("Use 'monid keys list' to see existing keys.");
         Deno.exit(1);
       }
       
@@ -53,27 +67,35 @@ export const renameCommand = new Command()
         config.activated_key = options.newLabel;
       }
       
-      await saveConfig(config);
-      
-      // Rename file
-      try {
-        const keysDir = await getKeysDir(config.workspace.id);
-        await Deno.rename(
-          join(keysDir, oldLabel),
-          join(keysDir, options.newLabel)
-        );
-      } catch (err) {
-        error(`Failed to rename key file: ${err}`);
-        // Revert config changes
-        targetKey.label = oldLabel;
-        if (config.activated_key === options.newLabel) {
-          config.activated_key = oldLabel;
+      // Handle file rename for verification keys only
+      if (targetKey.type === "verification") {
+        if (!config.workspace) {
+          error("Not authenticated. Run 'monid auth login' first.");
+          Deno.exit(1);
         }
-        await saveConfig(config);
-        throw err;
+        
+        try {
+          const keysDir = await getKeysDir(config.workspace.id);
+          await Deno.rename(
+            join(keysDir, oldLabel),
+            join(keysDir, options.newLabel)
+          );
+        } catch (err) {
+          error(`Failed to rename key file: ${err}`);
+          // Revert config changes
+          targetKey.label = oldLabel;
+          if (config.activated_key === options.newLabel) {
+            config.activated_key = oldLabel;
+          }
+          await saveConfig(config);
+          throw err;
+        }
       }
       
-      success(`Renamed key from '${oldLabel}' to '${options.newLabel}'`);
+      await saveConfig(config);
+      
+      const keyType = targetKey.type === "api" ? "API key" : "Agent Key";
+      success(`Renamed ${keyType} from '${oldLabel}' to '${options.newLabel}'`);
       
       if (config.activated_key === options.newLabel) {
         info("This is currently the active key");

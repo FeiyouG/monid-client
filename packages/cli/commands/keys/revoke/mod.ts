@@ -32,14 +32,38 @@ export const revokeCommand = new Command()
         }
 
         const config = await loadConfig();
-        if (!config || !config.workspace) {
-          error("Not authenticated. Run 'monid auth login' first.");
+        if (!config) {
+          error("No configuration found");
           Deno.exit(1);
         }
 
-        const targetKey = findKeyByLabelOrFingerprint(config.keys, identifier);
+        // Find key by label or fingerprint
+        let targetKey;
+        
+        if (options.label) {
+          targetKey = config.keys.find(k => k.label === options.label);
+        } else if (options.fingerprint) {
+          // Only verification keys have fingerprints
+          targetKey = config.keys.find(k => 
+            k.type === "verification" && 
+            (k.fingerprint === options.fingerprint || k.fingerprint_short === options.fingerprint)
+          );
+        }
+
         if (!targetKey) {
           error(`Key '${identifier}' not found`);
+          Deno.exit(1);
+        }
+
+        // Validate this is a verification key
+        if (targetKey.type !== "verification") {
+          error(`Cannot revoke API key '${targetKey.label}'`);
+          info("API keys can only be removed using 'monid keys remove --label <name>'");
+          Deno.exit(1);
+        }
+
+        if (!config.workspace) {
+          error("Not authenticated. Run 'monid auth login' first.");
           Deno.exit(1);
         }
 

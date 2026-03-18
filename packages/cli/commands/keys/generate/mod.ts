@@ -141,6 +141,7 @@ export const generateCommand = new Command()
 
       // Add key to config with fingerprint_short
       const keyConfig: KeyConfig = {
+        type: "verification",
         key_id: registeredKey.keyId,
         label: registeredKey.label,
         fingerprint: registeredKey.fingerprint,
@@ -156,8 +157,8 @@ export const generateCommand = new Command()
 
       config.keys.push(keyConfig);
 
-      // Set as activated key if none exists
-      if (!config.activated_key) {
+      // Auto-activate if first key
+      if (config.keys.length === 1) {
         config.activated_key = label;
       }
 

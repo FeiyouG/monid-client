@@ -2,12 +2,22 @@
  * Common types used throughout the CLI
  */
 
+// Union type for all keys
+export type UnifiedKeyConfig = VerificationKeyConfig | ApiKeyConfig;
+
 export interface Config {
   version: string;
   workspace?: WorkspaceConfig;
-  keys: KeyConfig[];
+  keys: UnifiedKeyConfig[];
   activated_key?: string;
   auth?: AuthInfo;
+}
+
+export interface ApiKeyConfig {
+  type: "api";
+  label: string;
+  key_encrypted: string;
+  prefix: string;
 }
 
 export interface WorkspaceConfig {
@@ -16,7 +26,8 @@ export interface WorkspaceConfig {
   name?: string;
 }
 
-export interface KeyConfig {
+export interface VerificationKeyConfig {
+  type: "verification";
   key_id: string;
   label: string;
   fingerprint: string;
@@ -26,6 +37,9 @@ export interface KeyConfig {
   created_at: string;
   expires_at?: string;
 }
+
+// Legacy export for backward compatibility
+export type KeyConfig = VerificationKeyConfig;
 
 export interface AuthInfo {
   last_login: string;
