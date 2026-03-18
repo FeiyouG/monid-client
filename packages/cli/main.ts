@@ -12,7 +12,6 @@
 import { Command } from "@cliffy/command";
 import { CompletionsCommand } from "@cliffy/command/completions";
 import { VERSION } from "@monid/core";
-import { authCommand } from "./commands/auth/mod.ts";
 import { keysCommand } from "./commands/keys/mod.ts";
 import { tasksCommand } from "./commands/tasks/mod.ts";
 import { quotesCommand } from "./commands/quotes/mod.ts";

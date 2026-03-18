@@ -4,7 +4,6 @@
 
 import { Command } from "@cliffy/command";
 import { loadConfig, saveConfig } from "../../../../lib/config.ts";
-import { findKeyByLabelOrFingerprint } from "../../../../utils/fingerprint.ts";
 import { success, error, info } from "../../../../utils/display.ts";
 import { obfuscateApiKey } from "../../../../utils/obfuscate.ts";
 import { decryptData, generateSystemPassword } from "../../../../lib/crypto.ts";

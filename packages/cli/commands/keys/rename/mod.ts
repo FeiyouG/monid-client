@@ -5,7 +5,6 @@
 import { Command } from "@cliffy/command";
 import { join } from "@std/path";
 import { loadConfig, saveConfig, getKeysDir } from "../../../../lib/config.ts";
-import { findKeyByLabelOrFingerprint } from "../../../../utils/fingerprint.ts";
 import { success, error, info } from "../../../../utils/display.ts";
 
 export const renameCommand = new Command()

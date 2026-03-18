@@ -6,7 +6,6 @@ import { Command } from "@cliffy/command";
 import { Confirm } from "@cliffy/prompt";
 import { loadConfig, saveConfig } from "../../../../lib/config.ts";
 import { getAccessToken } from "../../../../lib/credentials.ts";
-import { findKeyByLabelOrFingerprint } from "../../../../utils/fingerprint.ts";
 import { error, info, success } from "../../../../utils/display.ts";
 import { CONFIG } from "@monid/core";
 

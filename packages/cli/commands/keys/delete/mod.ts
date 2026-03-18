@@ -7,7 +7,6 @@ import { Confirm } from "@cliffy/prompt";
 import { join } from "@std/path";
 import { getKeysDir, loadConfig, saveConfig } from "../../../../lib/config.ts";
 import { getAccessToken } from "../../../../lib/credentials.ts";
-import { findKeyByLabelOrFingerprint } from "../../../../utils/fingerprint.ts";
 import { error, info, success, warning } from "../../../../utils/display.ts";
 import { CONFIG } from "@monid/core";
 

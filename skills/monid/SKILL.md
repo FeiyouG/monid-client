@@ -74,7 +74,7 @@ This downloads and installs the latest stable Monid CLI to `~/.local/bin/monid`.
 monid --version
 ```
 
-Expected output: `monid v1.0.0` (or later version)
+Expected output: `monid v0.0.1` or later. If the version is below 0.0.1 or the command fails, reinstall using the install script.
 
 **Supported platforms**: Linux x64, macOS ARM64 (Apple Silicon), Windows x64
 
@@ -83,50 +83,123 @@ Expected output: `monid v1.0.0` (or later version)
 - Ensure `~/.local/bin` is in your PATH
 - For Windows or manual installation, download binaries from: https://github.com/FeiyouG/monid-client/releases/latest
 
-### 2. Authenticate with OAuth
+### 2. Create a Monid Account
+
+If you don't have a Monid account yet, you'll need to register:
+
+1. Visit **https://app.monid.ai**
+2. Click on "Sign Up" or "Get Started"
+3. Complete the registration process (email, password, or social login)
+4. Verify your email address if required
+5. Log in to access your dashboard
+
+### 3. Generate an API Key
+
+Once logged into your Monid account:
+
+1. Navigate to **https://app.monid.ai/access/api-key**
+2. Click "Generate New API Key" or "Create API Key"
+3. Give your key a descriptive name (e.g., "Main CLI Key", "Development Key")
+4. Copy the generated API key immediately (it won't be shown again)
+
+**API Key Format**: Keys follow the format `monid_<stage>_<key>` (e.g., `monid_live_abc123xyz...`)
+
+⚠️ **Important**: Store your API key securely. You won't be able to see it again after closing the generation page.
+
+### 4. Add API Key to CLI
+
+Add your API key to the Monid CLI:
 
 ```bash
-monid auth login
+monid keys add --label main <your-api-key>
 ```
+
+Replace `<your-api-key>` with the API key you copied from the dashboard.
 
 **What happens**:
-1. CLI starts a local callback server on port 8918
-2. Your browser opens to the authentication page
-3. Sign in with your credentials (Google, GitHub, etc.)
-4. Browser redirects back to the CLI
-5. Workspace information is saved to `~/.monid/config.yaml`
-
-**If browser doesn't open**: Copy the URL from the terminal and paste it into your browser manually.
-
-**Verify authentication**:
-```bash
-monid auth whoami
-```
-
-Expected output shows your workspace and user email.
-
-### 3. Generate API Key
-
-```bash
-monid keys generate --label main
-```
-
-**What happens**:
-1. CLI generates an Ed25519 cryptographic key pair
-2. Private key is encrypted and stored locally at `~/.monid/keys/`
-3. Public key is automatically registered with the backend
-4. Key is activated for signing your requests
+1. CLI validates the API key format (must start with `monid_`)
+2. Key is encrypted using system-specific credentials (username@hostname)
+3. Encrypted key is stored locally in `~/.monid/config.yaml`
+4. Key is automatically activated for use
 
 **Verify key**:
 ```bash
 monid keys list
 ```
 
-Expected output shows your key marked with `*` (active).
+Expected output shows your key marked with `*` (active), along with its type (API Key), prefix, and status.
 
 ### Setup Complete!
 
-After these three steps, you're ready to execute searches. If the user hasn't completed these steps, guide them through installation, authentication, and key generation first before attempting any searches.
+After these four steps, you're ready to execute searches. If the user hasn't completed these steps, guide them through installation, account creation, and API key setup first before attempting any searches.
+
+## API Key Management
+
+Once you have an API key configured, you can manage your keys using these commands:
+
+### Available Commands
+
+**Add a new API key**:
+```bash
+monid keys add --label <name> <api-key>
+```
+- `<name>`: A descriptive label for your key (e.g., "main", "prod", "dev")
+- `<api-key>`: The API key from https://app.monid.ai/access/api-key
+- Labels must be unique
+- First key added is automatically activated
+
+**List all API keys**:
+```bash
+monid keys list
+```
+Shows a table with all configured keys, including:
+- Activation status (marked with `*`)
+- Key type (API Key)
+- Label
+- Key prefix (e.g., `monid_live`)
+- Status
+- Expiration (if applicable)
+
+**Activate a key**:
+```bash
+monid keys activate <label>
+```
+Set which key should be used for API requests.
+
+**Rename a key**:
+```bash
+monid keys rename <old-label> <new-label>
+```
+Change the label of an existing key.
+
+**Remove a key**:
+```bash
+monid keys remove <label>
+```
+Delete an API key from your local configuration. This does NOT revoke the key on the server - do that in the web dashboard at https://app.monid.ai/access/api-key.
+
+### API Key Format and Validation
+
+API keys must follow this format: `monid_<stage>_<key>`
+
+Examples:
+- `monid_live_abc123xyz...` (production)
+- `monid_test_def456uvw...` (testing)
+
+When you add a key, the CLI validates:
+1. Key starts with `monid_`
+2. Key contains at least 3 parts separated by `_`
+3. Format matches expected pattern
+
+Invalid keys will be rejected with a clear error message.
+
+### Security Notes
+
+- API keys are encrypted before being stored locally using AES-GCM encryption
+- Encryption password is derived from your system credentials (username@hostname)
+- Keys are stored in `~/.monid/config.yaml`
+- Never share your API keys or commit them to version control
+- To revoke a key, use the web dashboard at https://app.monid.ai/access/api-key
 
 ## Supported Capabilities
 
@@ -396,14 +469,19 @@ curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.s
 # 2. Verify installation
 monid --version
 
-# 3. Authenticate via OAuth (browser will open)
-monid auth login
+# 3. Create account (browser - do this at https://app.monid.ai)
+#    - Sign up with email or social login
+#    - Verify your email if required
 
-# 4. Generate and register API key
-monid keys generate --label main
+# 4. Generate API key (browser - do this at https://app.monid.ai/access/api-key)
+#    - Create new API key in the dashboard
+#    - Copy the key immediately (you won't see it again)
 
-# 5. Verify everything is ready
-monid auth whoami
+# 5. Add API key to CLI
+monid keys add --label main <your-api-key>
+
+# 6. Verify everything is ready
+monid keys list
 ```
 
 If already set up, skip to Step 2.
@@ -527,13 +605,24 @@ curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.s
 # Step 2: Verify installation
 monid --version
 
-# Step 3: Authenticate (browser will open)
-monid auth login
+# Step 3: Create Monid account
+# Open your browser and go to: https://app.monid.ai
+# Click "Sign Up" and complete registration
+# Verify your email if required
 
 # Step 4: Generate API key
-monid keys generate --label main
+# While logged in, go to: https://app.monid.ai/access/api-key
+# Click "Generate New API Key"
+# Give it a name (e.g., "Main CLI Key")
+# Copy the API key immediately (format: monid_live_...)
 
-# Step 5: Execute your first search
+# Step 5: Add API key to CLI
+monid keys add --label main <paste-your-api-key-here>
+
+# Step 6: Verify key is configured
+monid keys list
+
+# Step 7: Execute your first search
 monid search \
   --name "AI Tweets" \
   --query "Find the 50 most recent tweets about artificial intelligence from the past week" \
@@ -559,7 +648,7 @@ monid search \
   --output ai_tweets.json
 ```
 
-**Estimated time**: 3-5 minutes for complete setup and first search.
+**Estimated time**: 5-7 minutes for complete setup and first search.
 
 ### Example 1: Find Recent Tweets
 
@@ -570,7 +659,7 @@ monid search \
 ✅ Capability: X Tweet Scraper - EXISTS
 ✅ Feasible: Yes
 
-**Solution** (assumes Monid is already installed and authenticated):
+**Solution** (assumes Monid is already installed with API key configured):
 ```bash
 monid search \
   --name "Elon Musk Tweets" \
@@ -858,11 +947,34 @@ monid search \
 
 ## Troubleshooting
 
-### "Authentication expired"
-**Solution**: `monid auth login`
+### "No active key" or "API key not found"
+**Solution**: 
+1. Check if you have any keys configured: `monid keys list`
+2. If no keys exist:
+   - Go to https://app.monid.ai/access/api-key
+   - Generate a new API key
+   - Add it to CLI: `monid keys add --label main <your-api-key>`
+3. If keys exist but none are active: `monid keys activate <label>`
 
-### "No active key"
-**Solution**: `monid keys generate --label main` then `monid keys activate main`
+### "Invalid API key format"
+**Cause**: API key doesn't match required format `monid_<stage>_<key>`
+
+**Solution**: 
+- Verify you copied the full API key from the dashboard
+- Ensure key starts with `monid_`
+- Generate a new key if the old one was corrupted
+
+### "API key rejected" or "Unauthorized"
+**Possible causes**:
+- API key was revoked in the web dashboard
+- API key has expired
+- Using wrong API key for the environment
+
+**Solution**: 
+1. Log in to https://app.monid.ai/access/api-key
+2. Check if key is still active
+3. If revoked or expired, generate a new key and add it to CLI
+4. Remove old key: `monid keys remove <label>`
 
 ### "Task not found" or "Quote expired"
 **Solution**: Quotes expire after 1 hour. Create a new quote or execute immediately with `--wait`
@@ -878,9 +990,6 @@ monid search \
 
 ### "Invalid JSON schema"
 **Solution**: Validate JSON syntax, ensure proper structure, use online JSON schema validators
-
-### Browser doesn't open during login
-**Solution**: Copy the authorization URL from the terminal and paste it into your browser manually
 
 ## Best Practices
 
@@ -922,13 +1031,15 @@ When a user asks for data collection:
   - NO → Guide through: `curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.sh | bash`
   - YES → Continue to step 5
 
-### 5. Check Authentication
-- **Is user authenticated?**
-  - Don't know → Ask user to run `monid auth whoami`
+### 5. Check API Key Configuration
+- **Does user have an API key configured?**
+  - Don't know → Ask user to run `monid keys list`
   - NO → Guide through:
-    1. `monid auth login` (browser opens for OAuth)
-    2. `monid keys generate --label main`
-    3. Verify with `monid auth whoami`
+    1. Create account at https://app.monid.ai (if needed)
+    2. Generate API key at https://app.monid.ai/access/api-key
+    3. Copy the API key (format: `monid_<stage>_<key>`)
+    4. Add to CLI: `monid keys add --label main <api-key>`
+    5. Verify with `monid keys list`
   - YES → Continue to step 6
 
 ### 6. Determine Task Type
@@ -951,7 +1062,10 @@ Monid enables agents and LLMs to help users collect data from social media, e-co
 
 1. **Verify feasibility** (CRITICAL): Check platform and capability support BEFORE attempting
 2. **Install CLI** (one-time): `curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.sh | bash`
-3. **Authenticate** (one-time): `monid auth login` + `monid keys generate --label main`
+3. **Setup API key** (one-time):
+   - Register account at https://app.monid.ai
+   - Generate API key at https://app.monid.ai/access/api-key
+   - Add to CLI: `monid keys add --label main <api-key>`
 4. **Execute searches**: Use natural language queries with structured output schemas
 5. **Monitor results**: Track execution status and download data
 
@@ -960,7 +1074,9 @@ Monid enables agents and LLMs to help users collect data from social media, e-co
 ✅ **Verify FIRST**: Platform supported → Capability exists → Request feasible
 ✅ **Stop if verification fails**: Don't proceed with unsupported requests
 ✅ **Be explicit**: Tell users clearly what IS and ISN'T possible
-✅ **Check installation**: Verify CLI is installed and authenticated
+✅ **Check installation**: Verify CLI is installed with API key configured
+✅ **Get API keys from web dashboard**: https://app.monid.ai/access/api-key
+✅ **Validate API key format**: Must be `monid_<stage>_<key>`
 ✅ **Design realistic schemas**: Match expected data structure
 ✅ **Save results**: Always use `--output` flag
 

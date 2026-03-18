@@ -6,7 +6,7 @@
 import { Command } from "@cliffy/command";
 import { Table, Column } from "@cliffy/table";
 import type { Execution } from "../../../../types/index.ts";
-import { success, error, info, prettyJson, statusBadge, formatTimeRemaining } from "../../../../utils/display.ts";
+import { success, error, info, prettyJson, statusBadge } from "../../../../utils/display.ts";
 import { getCliCoreClient } from "../../../core-client.ts";
 
 export const getCommand = new Command()
