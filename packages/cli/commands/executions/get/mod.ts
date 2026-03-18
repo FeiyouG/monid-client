@@ -84,27 +84,23 @@ export function displayExecutionResult(execution: Execution, outputFile?: string
   }
   
   if (execution.status === "COMPLETED") {
-    if (!execution.result) {
-      info("Results expired (TTL: 24 hours). Re-run if needed.");
+    if (execution.output === undefined || execution.output === null) {
+      info("No output available. The execution may have completed without producing results.");
       return;
     }
     
     success("Execution completed successfully!");
     console.log("");
-    console.log("Results:");
-    console.log(prettyJson(execution.result.data));
+    console.log("Output:");
+    console.log(prettyJson(execution.output));
     console.log("");
-    
-    if (execution.result.expiresAt) {
-      info(`Results expire: ${formatTimeRemaining(execution.result.expiresAt)}`);
-    }
     
     if (outputFile) {
       try {
-        Deno.writeTextFileSync(outputFile, JSON.stringify(execution.result.data, null, 2));
-        success(`Results saved to: ${outputFile}`);
+        Deno.writeTextFileSync(outputFile, JSON.stringify(execution.output, null, 2));
+        success(`Output saved to: ${outputFile}`);
       } catch (err) {
-        error(`Failed to save results: ${err}`);
+        error(`Failed to save output: ${err}`);
       }
     }
   }

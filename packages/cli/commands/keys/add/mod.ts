@@ -7,7 +7,8 @@ import { loadConfig, saveConfig, createDefaultConfig } from "../../../../lib/con
 import { encryptData, generateSystemPassword } from "../../../../lib/crypto.ts";
 import { 
   obfuscateApiKey,
-  extractApiKeyPrefix 
+  extractApiKeyPrefix,
+  validateApiKeyFormat
 } from "../../../../utils/obfuscate.ts";
 import { success, error } from "../../../../utils/display.ts";
 
@@ -20,6 +21,14 @@ export const addCommand = new Command()
     try {
       const apiKey = options.apiKey;
       const label = options.label;
+
+      // Validate API key format
+      try {
+        validateApiKeyFormat(apiKey);
+      } catch (err) {
+        error(err instanceof Error ? err.message : String(err));
+        Deno.exit(1);
+      }
 
       // Extract prefix
       const prefix = extractApiKeyPrefix(apiKey);

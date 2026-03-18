@@ -29,3 +29,23 @@ export function extractApiKeyPrefix(key: string): string {
   parts.pop(); // Remove last part (the actual key)
   return parts.join('_');
 }
+
+/**
+ * Validate API key format
+ * @throws Error if key format is invalid
+ */
+export function validateApiKeyFormat(key: string): void {
+  const parts = key.split('_');
+  
+  if (parts.length < 3) {
+    throw new Error(
+      "Malformatted API key: Expected format 'monid_<stage>_<key>' with at least 3 parts separated by underscores"
+    );
+  }
+  
+  if (parts[0] !== "monid") {
+    throw new Error(
+      "Malformatted API key: Must start with 'monid'"
+    );
+  }
+}
