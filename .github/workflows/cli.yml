@@ -64,18 +64,12 @@ jobs:
           echo "OAUTH_SCOPES=profile email openid" >> $GITHUB_ENV
           echo "OAUTH_TYPE=${{ vars.OAUTH_TYPE }}" >> $GITHUB_ENV
 
-      - name: Generate config
-        run: deno run --allow-env --allow-read --allow-write scripts/gen_config.ts
-
       - name: Build binary
         shell: bash
-        run: |
-          deno compile \
-            --no-check \
-            --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run \
-            --target ${{ matrix.target }} \
-            --output dist/${{ matrix.output }} \
-            packages/cli/main.compile.ts
+        env:
+          DENO_TARGET: x86_64-unknown-linux-gnu
+          DENO_OUTPUT: dist/monid-verify
+        run: deno task cli:build:ci
 
       - name: Test binary
         run: dist/monid-verify --version
@@ -133,13 +127,10 @@ jobs:
 
       - name: Build binary
         shell: bash
-        run: |
-          deno compile \
-            --no-check \
-            --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run \
-            --target ${{ matrix.target }} \
-            --output dist/${{ matrix.output }} \
-            packages/cli/main.compile.ts
+        env:
+          DENO_TARGET: ${{ matrix.target }}
+          DENO_OUTPUT: dist/${{ matrix.output }}
+        run: deno task cli:build:ci
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -258,13 +249,10 @@ jobs:
 
       - name: Build binary
         shell: bash
-        run: |
-          deno compile \
-            --no-check \
-            --allow-net --allow-read --allow-write --allow-env --allow-sys --allow-run \
-            --target ${{ matrix.target }} \
-            --output dist/${{ matrix.output }} \
-            packages/cli/main.compile.ts
+        env:
+          DENO_TARGET: ${{ matrix.target }}
+          DENO_OUTPUT: dist/${{ matrix.output }}
+        run: deno task cli:build:ci
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

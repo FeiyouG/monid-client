@@ -97,7 +97,7 @@ If you don't have a Monid account yet, you'll need to register:
 
 Once logged into your Monid account:
 
-1. Navigate to **https://app.monid.ai/access/api-key**
+1. Navigate to **https://app.monid.ai/access/api-keys**
 2. Click "Generate New API Key" or "Create API Key"
 3. Give your key a descriptive name (e.g., "Main CLI Key", "Development Key")
 4. Copy the generated API key immediately (it won't be shown again)
@@ -144,7 +144,7 @@ Once you have an API key configured, you can manage your keys using these comman
 monid keys add --label <name> <api-key>
 ```
 - `<name>`: A descriptive label for your key (e.g., "main", "prod", "dev")
-- `<api-key>`: The API key from https://app.monid.ai/access/api-key
+- `<api-key>`: The API key from https://app.monid.ai/access/api-keys
 - Labels must be unique
 - First key added is automatically activated
 
@@ -176,7 +176,7 @@ Change the label of an existing key.
 ```bash
 monid keys remove <label>
 ```
-Delete an API key from your local configuration. This does NOT revoke the key on the server - do that in the web dashboard at https://app.monid.ai/access/api-key.
+Delete an API key from your local configuration. This does NOT revoke the key on the server - do that in the web dashboard at https://app.monid.ai/access/api-keys.
 
 ### API Key Format and Validation
 
@@ -199,7 +199,7 @@ Invalid keys will be rejected with a clear error message.
 - Encryption password is derived from your system credentials (username@hostname)
 - Keys are stored in `~/.monid/config.yaml`
 - Never share your API keys or commit them to version control
-- To revoke a key, use the web dashboard at https://app.monid.ai/access/api-key
+- To revoke a key, use the web dashboard at https://app.monid.ai/access/api-keys
 
 ## Supported Capabilities
 
@@ -473,7 +473,7 @@ monid --version
 #    - Sign up with email or social login
 #    - Verify your email if required
 
-# 4. Generate API key (browser - do this at https://app.monid.ai/access/api-key)
+# 4. Generate API key (browser - do this at https://app.monid.ai/access/api-keys)
 #    - Create new API key in the dashboard
 #    - Copy the key immediately (you won't see it again)
 
@@ -493,9 +493,48 @@ A **task** defines:
 - **query**: Natural language description of what to collect
 - **output-schema**: JSON schema defining expected output structure
 
-### Step 3: Execute a Search (Simplified Method)
+### Step 3: Execute a Search
 
-The simplest approach combines task creation, quote, and execution:
+⏱️ **Execution Timing**: Tasks can take anywhere from **1 second to 120 seconds** depending on complexity, data volume, and platform rate limits.
+
+💡 **Recommendation for Agents**: Use **async execution** (without `--wait`) as the default pattern. This provides non-blocking operation and better user experience. See "Understanding Execution Times" section below for detailed orchestration patterns.
+
+#### Method A: Synchronous Execution (Blocking)
+
+Use this for very simple queries when immediate results are needed:
+
+```bash
+# Quick execution with natural language query (BLOCKS until complete)
+monid search \
+  --name "Twitter Sentiment Analysis" \
+  --query "Find the most recent tweets related to Elon Musk from the past 7 days" \
+  --output-schema '{
+    "type": "object",
+    "properties": {
+      "tweets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "text": {"type": "string"},
+            "author": {"type": "string"},
+            "timestamp": {"type": "string"},
+            "likes": {"type": "number"},
+            "retweets": {"type": "number"}
+          }
+        }
+      }
+    }
+  }' \
+  --wait \
+  --output results.json
+```
+
+⚠️ **Warning**: This will block for 1-120 seconds. Not recommended for agents.
+
+#### Method B: Asynchronous Execution (Recommended for Agents)
+
+Use this as the default pattern for agent-orchestrated tasks:
 
 ```bash
 # Quick execution with natural language query
@@ -524,7 +563,51 @@ monid search \
   --output results.json
 ```
 
-**Flags explained**:
+⚠️ **Warning**: This will block for 1-120 seconds. Not recommended for agents.
+
+#### Method B: Asynchronous Execution (Recommended for Agents)
+
+Use this as the default pattern for agent-orchestrated tasks:
+
+```bash
+# Start execution (returns immediately with execution-id)
+monid search \
+  --name "Twitter Sentiment Analysis" \
+  --query "Find the most recent tweets related to Elon Musk from the past 7 days" \
+  --output-schema '{
+    "type": "object",
+    "properties": {
+      "tweets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "text": {"type": "string"},
+            "author": {"type": "string"},
+            "timestamp": {"type": "string"},
+            "likes": {"type": "number"},
+            "retweets": {"type": "number"}
+          }
+        }
+      }
+    }
+  }' \
+  --yes
+
+# Output shows execution-id immediately:
+# ✓ Execution started: exec_abc123xyz
+# Check status with: monid executions get --execution-id exec_abc123xyz
+
+# Later, poll for status
+monid executions get --execution-id exec_abc123xyz
+
+# When complete, retrieve results
+monid executions get --execution-id exec_abc123xyz --output results.json
+```
+
+✅ **Benefits**: Non-blocking, user can continue conversation, better UX.
+
+**Flags explained (both methods)**:
 - `--name`: Human-readable task name
 - `--query`: Natural language query describing the task
 - `--output-schema`: JSON schema (inline JSON or file path)
@@ -575,16 +658,259 @@ monid search --task-id <task-id> --wait --output results.json
 
 ### Step 5: Monitor Execution
 
+For **async execution** (tasks started without `--wait`), use these commands to monitor progress:
+
 ```bash
-# Check execution status
+# Check execution status (returns immediately)
 monid executions get --execution-id <execution-id>
 
-# Wait for completion and save results
+# Output shows:
+# - Status: PENDING, RUNNING, SUCCEEDED, FAILED
+# - Progress information (if available)
+# - Error messages (if failed)
+# - Results (if succeeded)
+
+# Wait for completion and save results (blocking - use with caution)
 monid executions get --execution-id <execution-id> --wait --output results.json
 
-# List all executions
+# List all executions (useful for finding lost execution-ids)
 monid executions list
+
+# List recent executions with filtering
+monid executions list --status RUNNING
+monid executions list --limit 10
 ```
+
+**Status meanings**:
+- `PENDING`: Queued, waiting to start
+- `RUNNING`: Actively executing
+- `SUCCEEDED`: Complete, results available for retrieval
+- `FAILED`: Execution failed (check error message in output)
+
+**Best practice for agents**: Poll every 30-60 seconds for tasks in progress. Don't block user conversation while waiting. Provide status updates proactively or when asked.
+
+### Understanding Execution Times
+
+⚠️ **Important**: Task execution times can vary significantly from **1 second to 120 seconds** depending on:
+- **Task complexity**: Query complexity and data transformation requirements
+- **Data volume**: Number of items being collected
+- **Platform rate limits**: Some platforms throttle requests, increasing execution time
+- **Capability type**: Different scrapers have different performance characteristics
+- **Current system load**: Queue times and concurrent executions
+
+**Because execution times are unpredictable**, agents should use async patterns for all tasks except the simplest queries.
+
+### Synchronous vs Asynchronous Execution
+
+**Synchronous (with `--wait` flag)**:
+```bash
+# Blocks until completion (can take 1s to 120s)
+monid search --name "Quick Search" --query "..." --wait --output results.json
+```
+- ✅ **Use when**: Very simple queries, immediate results required, interactive CLI usage
+- ❌ **Avoid when**: Task complexity unknown, agent orchestration, background operations, any risk of >30s execution
+
+**Asynchronous (recommended for agents)**:
+```bash
+# Step 1: Start execution (non-blocking, returns immediately)
+monid search --name "My Search" --query "..." --output-schema '{...}' --yes
+
+# Returns immediately with execution-id:
+# ✓ Execution started: exec_abc123xyz
+# Status: PENDING
+# Check status with: monid executions get --execution-id exec_abc123xyz
+
+# Step 2: Poll for status (when needed)
+monid executions get --execution-id exec_abc123xyz
+
+# Step 3: Retrieve results when complete
+monid executions get --execution-id exec_abc123xyz --output results.json
+```
+- ✅ **Use when**: Most tasks (default choice for agents), long-running operations, batch jobs
+- ✅ **Benefits**: Non-blocking, can run multiple tasks in parallel, better user experience
+
+### 🤖 Agent Orchestration for Async Execution
+
+When orchestrating Monid tasks as an agent/LLM, follow these patterns for optimal user experience:
+
+#### Pattern 1: Fire-and-Forget with Status Updates
+
+**Best for**: Any task where execution time is uncertain (recommended default)
+
+**Agent communication pattern**:
+
+1. **Before execution**: 
+   ```
+   "I'm going to start collecting [data description]. This will run in the background 
+   and typically takes 10-60 seconds. I'll let you know when it's ready."
+   ```
+
+2. **During execution**:
+   - Execute: `monid search --name "..." --query "..." --yes` (without --wait)
+   - Capture execution-id from output
+   - Store execution-id in agent memory/context
+   - Immediately respond: "✓ Started execution: exec_abc123xyz. I'll check on this shortly."
+
+3. **Background monitoring** (agent-controlled):
+   - Set internal timer/polling interval (e.g., every 30 seconds)
+   - Periodically run: `monid executions get --execution-id exec_abc123xyz`
+   - Parse status: PENDING, RUNNING, SUCCEEDED, FAILED
+   
+4. **User communication during wait**:
+   - Don't block the conversation
+   - Allow user to ask other questions
+   - Provide status updates if asked: 
+     ```
+     "The data collection is still running (status: RUNNING). 
+     Started 2 minutes ago, checking again shortly..."
+     ```
+
+5. **Upon completion**:
+   - Proactively notify: 
+     ```
+     "✓ Your [data description] is ready! I've collected [summary]. 
+     Results saved to results.json"
+     ```
+   - Offer to analyze/summarize the results
+
+#### Pattern 2: Parallel Execution for Multiple Tasks
+
+**Best for**: Batch operations, multiple independent data sources
+
+**Agent orchestration**:
+
+1. **Identify parallelizable tasks**:
+   ```
+   User: "Get me tweets about AI and Instagram posts about AI"
+   ```
+   
+2. **Launch multiple async executions**:
+   ```bash
+   # Task 1
+   monid search --name "AI Tweets" --query "tweets about AI" --yes
+   # Returns: exec_tweet_123
+   
+   # Task 2  
+   monid search --name "AI Instagram" --query "Instagram posts about AI" --yes
+   # Returns: exec_ig_456
+   ```
+
+3. **Communicate plan**:
+   ```
+   "I'm running two data collection tasks in parallel:
+   • Twitter search (exec_tweet_123)
+   • Instagram search (exec_ig_456)
+   
+   Both are running in the background. I'll notify you as each completes."
+   ```
+
+4. **Monitor all executions**:
+   - Track multiple execution-ids
+   - Poll each periodically
+   - Notify as each completes
+
+5. **Aggregate and deliver**:
+   ```
+   "Both collections are complete! Here's a summary:
+   • Twitter: 150 tweets collected
+   • Instagram: 89 posts collected
+   Would you like me to analyze or combine these results?"
+   ```
+
+#### Pattern 3: Progressive Status Updates
+
+**Best for**: Keeping user engaged during any async operation
+
+**Agent status update pattern**:
+
+```
+0:00 - "Starting data collection for [description]..."
+0:30 - "Task is running... (status: RUNNING)"
+1:30 - "Still collecting data..."
+2:30 - "Processing results..."
+3:00 - "✓ Complete! Results ready."
+```
+
+**Implementation**:
+- Use execution polling intervals: 30s, 60s, 90s (exponential backoff)
+- Parse task status from `monid executions get` output
+- Provide meaningful updates, not just "still running"
+- Balance keeping user informed vs. being too chatty
+
+### Agent Decision Tree: When to Use Async
+
+```
+For ANY Monid task, should you use async?
+├─ Is this an agent/LLM orchestrating the task?
+│   └─ YES → Default to ASYNC pattern (recommended)
+│       ├─ Start execution without --wait
+│       ├─ Store execution-id
+│       ├─ Poll in background
+│       └─ Notify when complete
+│
+├─ Is this interactive CLI usage by human?
+│   ├─ Very simple query AND user wants immediate result
+│   │   └─ OK to use --wait (but async is still fine)
+│   └─ Any complexity or uncertainty
+│       └─ Use ASYNC to avoid blocking
+│
+└─ General rule: **When in doubt, use async**
+```
+
+### Error Handling for Async Execution
+
+When polling async executions, handle these states:
+
+```bash
+# Get execution status
+monid executions get --execution-id exec_abc123
+
+# Possible states:
+# - PENDING: Queued, not started yet
+# - RUNNING: Actively executing
+# - SUCCEEDED: Complete, results available
+# - FAILED: Execution failed (check error message)
+# - CANCELLED: User or system cancelled
+```
+
+**Agent error handling**:
+- **PENDING**: Continue polling (normal startup delay)
+- **RUNNING**: Continue polling, provide status updates
+- **SUCCEEDED**: Retrieve results with `--output`, notify user
+- **FAILED**: Parse error message, explain to user, suggest fixes or alternatives
+- **CANCELLED**: Inform user, ask if they want to retry
+- **Timeout** (no status change after 5 min): Notify user, check with `monid executions list`
+
+### Command Reference for Async Patterns
+
+```bash
+# Start async execution (recommended for agents)
+monid search --name "My Task" --query "..." --output-schema '{...}' --yes
+# Captures execution-id from output
+
+# Check status (polling - returns immediately)
+monid executions get --execution-id <exec-id>
+
+# Check status + wait for completion (blocks)
+monid executions get --execution-id <exec-id> --wait
+
+# Get results when ready
+monid executions get --execution-id <exec-id> --output results.json
+
+# List all executions (find lost execution-ids)
+monid executions list
+
+# List filtered executions
+monid executions list --status RUNNING
+monid executions list --limit 10
+```
+
+**Key insight for agents**: The async pattern provides better UX because:
+1. User is not blocked waiting for unknown duration (1-120s)
+2. User can continue conversation during execution
+3. Agent can provide helpful status updates
+4. Multiple tasks can run in parallel
+5. Execution survives if agent/session is interrupted
 
 ## Common Use Cases with Examples
 
@@ -611,7 +937,7 @@ monid --version
 # Verify your email if required
 
 # Step 4: Generate API key
-# While logged in, go to: https://app.monid.ai/access/api-key
+# While logged in, go to: https://app.monid.ai/access/api-keys
 # Click "Generate New API Key"
 # Give it a name (e.g., "Main CLI Key")
 # Copy the API key immediately (format: monid_live_...)
@@ -951,7 +1277,7 @@ monid search \
 **Solution**: 
 1. Check if you have any keys configured: `monid keys list`
 2. If no keys exist:
-   - Go to https://app.monid.ai/access/api-key
+   - Go to https://app.monid.ai/access/api-keys
    - Generate a new API key
    - Add it to CLI: `monid keys add --label main <your-api-key>`
 3. If keys exist but none are active: `monid keys activate <label>`
@@ -971,7 +1297,7 @@ monid search \
 - Using wrong API key for the environment
 
 **Solution**: 
-1. Log in to https://app.monid.ai/access/api-key
+1. Log in to https://app.monid.ai/access/api-keys
 2. Check if key is still active
 3. If revoked or expired, generate a new key and add it to CLI
 4. Remove old key: `monid keys remove <label>`
@@ -991,6 +1317,33 @@ monid search \
 ### "Invalid JSON schema"
 **Solution**: Validate JSON syntax, ensure proper structure, use online JSON schema validators
 
+### "Task is taking a very long time"
+**Solution**: 
+- Check status: `monid executions get --execution-id <id>`
+- If status is RUNNING, this is normal - tasks can take 1-120 seconds
+- Large scraping jobs may take the full 120 seconds or occasionally longer
+- If PENDING for >5 minutes, there may be queue delays (contact support)
+- If RUNNING for >3 minutes, be patient - some capabilities are slower
+- Task execution time depends on complexity, platform rate limits, and data volume
+
+### "Lost execution-id from async execution"
+**Solution**: 
+- List all recent executions: `monid executions list`
+- Filter by status: `monid executions list --status RUNNING`
+- Find your task by name or timestamp in the list
+- Copy the execution-id and use: `monid executions get --execution-id <exec-id>`
+- Alternatively, check most recent: `monid executions list --limit 1`
+
+### "Agent blocked waiting for long task" (For Developers)
+**Problem**: Using `--wait` flag caused agent to block for 1-120 seconds
+
+**Solution**:
+- Don't use `--wait` for tasks with uncertain execution time
+- Use async pattern as default: start task without `--wait`, store exec-id, poll later
+- Implement background polling (every 30-60s) instead of blocking
+- Allow user to continue conversation while task runs
+- See "Agent Orchestration for Async Execution" section for detailed patterns
+
 ## Best Practices
 
 1. **Verify before executing**: Always check platform and capability support BEFORE attempting a search
@@ -1001,6 +1354,21 @@ monid search \
 6. **Structure queries well**: Be specific about what you want, include filters (date, location, keywords)
 7. **Design realistic schemas**: Match schema to actual data structure scrapers provide
 8. **Respect rate limits**: Use reasonable request sizes to avoid timeouts
+9. **🆕 Default to async execution**: 
+   - Agents should use async pattern (no `--wait`) as the default choice
+   - Tasks can take 1-120 seconds - unpredictable timing makes async safer
+   - Only use `--wait` for very simple queries in interactive CLI usage
+   - Store execution-ids immediately and poll in background
+10. **🆕 Communicate timing expectations**: 
+   - Tell users when tasks are running in background
+   - Provide status updates during longer operations (>1 minute)
+   - Don't block conversation during async execution
+   - Proactively notify when results are ready
+11. **🆕 Handle async execution carefully**:
+   - Store execution-ids immediately after starting tasks
+   - Track multiple execution-ids if running parallel tasks
+   - Use `monid executions list` to recover lost execution-ids
+   - Poll periodically (30-60s intervals) without blocking user interaction
 
 ## Workflow Decision Tree
 
@@ -1036,7 +1404,7 @@ When a user asks for data collection:
   - Don't know → Ask user to run `monid keys list`
   - NO → Guide through:
     1. Create account at https://app.monid.ai (if needed)
-    2. Generate API key at https://app.monid.ai/access/api-key
+    2. Generate API key at https://app.monid.ai/access/api-keys
     3. Copy the API key (format: `monid_<stage>_<key>`)
     4. Add to CLI: `monid keys add --label main <api-key>`
     5. Verify with `monid keys list`
@@ -1047,14 +1415,39 @@ When a user asks for data collection:
   - One-time → Use `monid search --name --query --output-schema`
   - Repeated → Create task with `monid tasks create`, then reference with `--task-id`
 
-### 7. Execute with Appropriate Flags
-- Add `--wait` for immediate results
-- Add `--output` to save results
-- Add `--yes` if user pre-approved cost
+### 7. Execute with Appropriate Mode
+
+**Choose execution mode based on context**:
+
+**For agents (recommended default)**:
+- Use async: `monid search --name "..." --query "..." --yes` (no --wait)
+- Benefit: Non-blocking, better UX, user can continue conversation
+- Store execution-id immediately from output
+- Communicate to user: "Started data collection, running in background..."
+
+**For interactive CLI (occasional use)**:
+- For very simple queries: `monid search ... --wait --output results.json`
+- Benefit: Immediate results, simpler flow
+- Warning: Blocks for 1-120 seconds
+
+**Always include**:
+- `--output` to save results
+- `--yes` if user pre-approved cost or using async pattern
 
 ### 8. Monitor and Deliver
-- If using `--wait`, results appear automatically
-- If not, guide user to check status with `monid executions get`
+
+**For synchronous execution (with `--wait`)**:
+- Results appear automatically when complete
+- Display or summarize results to user immediately
+
+**For asynchronous execution (no `--wait`) - RECOMMENDED FOR AGENTS**:
+- Store execution-id immediately after command returns
+- Poll periodically: `monid executions get --execution-id <exec-id>`
+- Provide status updates to user if asked or after 1+ minutes
+- Don't block conversation - allow user to ask other questions
+- Notify user proactively when complete: "✓ Your data is ready!"
+- Retrieve results: `monid executions get --execution-id <exec-id> --output results.json`
+- If execution-id is lost, use: `monid executions list` to find it
 
 ## Summary
 
@@ -1064,7 +1457,7 @@ Monid enables agents and LLMs to help users collect data from social media, e-co
 2. **Install CLI** (one-time): `curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.sh | bash`
 3. **Setup API key** (one-time):
    - Register account at https://app.monid.ai
-   - Generate API key at https://app.monid.ai/access/api-key
+   - Generate API key at https://app.monid.ai/access/api-keys
    - Add to CLI: `monid keys add --label main <api-key>`
 4. **Execute searches**: Use natural language queries with structured output schemas
 5. **Monitor results**: Track execution status and download data
@@ -1075,7 +1468,7 @@ Monid enables agents and LLMs to help users collect data from social media, e-co
 ✅ **Stop if verification fails**: Don't proceed with unsupported requests
 ✅ **Be explicit**: Tell users clearly what IS and ISN'T possible
 ✅ **Check installation**: Verify CLI is installed with API key configured
-✅ **Get API keys from web dashboard**: https://app.monid.ai/access/api-key
+✅ **Get API keys from web dashboard**: https://app.monid.ai/access/api-keys
 ✅ **Validate API key format**: Must be `monid_<stage>_<key>`
 ✅ **Design realistic schemas**: Match expected data structure
 ✅ **Save results**: Always use `--output` flag
