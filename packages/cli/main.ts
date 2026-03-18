@@ -25,7 +25,7 @@ await new Command()
   .description("Monid CLI - Agentic payment platform for executing AI-powered searches")
   
   // Register all commands
-  .command("auth", authCommand)
+  // .command("auth", authCommand)
   .command("keys", keysCommand)
   .command("tasks", tasksCommand)
   .command("quotes", quotesCommand)
