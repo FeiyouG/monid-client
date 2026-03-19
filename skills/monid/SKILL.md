@@ -1,6 +1,6 @@
 ---
 name: monid
-description: How to use the Monid CLI to execute data scraping and collection tasks from social media platforms, e-commerce sites, and search engines. Use this skill when the user needs to scrape data from Twitter/X, Instagram, TikTok, Facebook, LinkedIn, YouTube, Amazon, or Google Maps. This skill provides complete workflow guidance for authentication, task creation, price quotes, and execution monitoring. ALWAYS use this skill when the user mentions scraping, collecting, or extracting data from supported platforms, even if they don't explicitly say "Monid". Use this for queries like "find tweets about X", "scrape Instagram posts", "get Amazon product reviews", or any data collection from the supported platforms.
+description: How to use the Monid CLI to execute data scraping and collection tasks from social media platforms, e-commerce sites, and search engines. Use this skill when the user needs to scrape data from Twitter/X, Instagram, TikTok, Facebook, LinkedIn, YouTube, Amazon, or Google Maps. This skill provides complete workflow guidance for authentication, task creation, price quotes, and execution monitoring. Monid supports two modes - standard (API key authentication) and x402 (anonymous crypto payment via EVM wallet using USDC). Use the x402 mode when the user wants anonymous execution without an account, or wants to pay with crypto. ALWAYS use this skill when the user mentions scraping, collecting, or extracting data from supported platforms, even if they don't explicitly say "Monid". Also use this skill when the user mentions x402, crypto payments for APIs, or anonymous data scraping. Use this for queries like "find tweets about X", "scrape Instagram posts", "get Amazon product reviews", "anonymous search", "pay with crypto", or any data collection from the supported platforms.
 ---
 
 # Monid CLI Skill
@@ -9,11 +9,24 @@ Monid is an agentic payment platform CLI that enables secure, pay-per-use data s
 
 ## Core Concept
 
-Monid follows a **quote-then-execute** workflow:
+Monid supports **two execution modes**:
+
+### Standard Mode (`monid search`)
+Follows a **quote-then-execute** workflow with API key authentication:
 1. **Create a task** (defines what data to collect)
 2. **Get a price quote** (shows cost before execution)
 3. **Execute the search** (runs the scraping job)
 4. **Monitor and retrieve results** (check status and download data)
+
+Requires a Monid account and API key. Supports both synchronous and asynchronous execution.
+
+### x402 Anonymous Mode (`monid x402 search`)
+**Anonymous, pay-per-request** execution via crypto wallet:
+1. **Configure a wallet** (one-time: add an EVM private key)
+2. **Execute the search** (payment is handled automatically via USDC)
+3. **Get results immediately** (synchronous only)
+
+No Monid account or API key required. Requires an EVM wallet with USDC and ETH for gas. Execution is **synchronous only** and takes 1-120 seconds (blocks until complete).
 
 ## 🚨 CRITICAL: Verify Capabilities Before Query Execution
 
@@ -64,7 +77,7 @@ Before using Monid for data scraping, the user must complete these one-time setu
 
 **Quick Install (Recommended)**:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.sh | bash
+curl -fsSL https://monid.ai/install.sh | bash
 ```
 
 This downloads and installs the latest stable Monid CLI to `~/.local/bin/monid`.
@@ -74,7 +87,7 @@ This downloads and installs the latest stable Monid CLI to `~/.local/bin/monid`.
 monid --version
 ```
 
-Expected output: `monid v0.0.1` or later. If the version is below 0.0.1 or the command fails, reinstall using the install script.
+Expected output: `monid v0.0.3` or later. If the version is below 0.0.3 or the command fails, reinstall using the install script.
 
 **Supported platforms**: Linux x64, macOS ARM64 (Apple Silicon), Windows x64
 
@@ -200,6 +213,256 @@ Invalid keys will be rejected with a clear error message.
 - Keys are stored in `~/.monid/config.yaml`
 - Never share your API keys or commit them to version control
 - To revoke a key, use the web dashboard at https://app.monid.ai/access/api-keys
+
+## x402 Anonymous Search (Crypto Payment)
+
+x402 is an alternative execution mode that allows **anonymous, account-free** data scraping. Instead of authenticating with an API key and billing to a Monid account, x402 uses an EVM crypto wallet to pay for each request directly with USDC.
+
+### What is x402?
+
+[x402](https://docs.x402.org) is an open payment protocol for HTTP APIs. When the server responds with HTTP 402 Payment Required, the x402 client automatically:
+1. Reads the payment requirements from the response
+2. Signs a USDC payment authorization using your wallet
+3. Retries the request with the signed payment attached
+4. Returns the results
+
+This all happens transparently — from the user's perspective, you just run a command and get results.
+
+### When to Use x402 vs Standard Search
+
+| Aspect | Standard (`monid search`) | x402 (`monid x402 search`) |
+|--------|--------------------------|---------------------------|
+| Authentication | API key | EVM wallet (crypto) |
+| Account required | Yes (monid.ai account) | **No (anonymous)** |
+| Payment | Pre-quoted, billed to account | Direct USDC from wallet |
+| Execution mode | Sync or async | **Synchronous only** |
+| Execution time | 1-120 seconds | 1-120 seconds |
+| `--wait` flag | Supported | Not needed (always synchronous) |
+| `--task-id` / `--quote-id` | Supported | Not supported |
+| Async polling | Yes (`monid executions get`) | No |
+
+**Use x402 when**:
+- User does not have or want a Monid account
+- User wants to pay with crypto (USDC)
+- User wants anonymous execution
+- User has an EVM wallet with funds
+
+**Use standard search when**:
+- User has a Monid account and API key
+- User needs async execution (non-blocking)
+- User wants to create reusable tasks
+- User needs to track executions over time
+
+### x402 Prerequisites
+
+Before using x402, the user needs:
+
+1. **Monid CLI installed** (same as standard — see Installation section above)
+2. **An EVM private key** (0x-prefixed, 64 hex characters)
+   - This can be from any EVM-compatible wallet (MetaMask export, Foundry, etc.)
+3. **Wallet funded with**:
+   - **USDC** for payment (the actual search cost)
+   - **ETH** for gas fees (small amount needed for transaction signing)
+
+**For testnet (Base Sepolia)**:
+- Get testnet ETH: https://www.alchemy.com/faucets/base-sepolia or https://portal.cdp.coinbase.com
+- Get testnet USDC: https://faucet.circle.com/ (select Base Sepolia)
+
+### Wallet Management
+
+The wallet stores your EVM private key securely on disk, encrypted with AES-256-GCM using machine-specific credentials. Encrypted key files are stored at `~/.monid/wallets/<label>` with 0600 permissions.
+
+#### Add a Wallet
+
+```bash
+monid wallet add --label <name> --private-key <0x...>
+```
+
+- `<name>`: A descriptive label (e.g., "main", "testnet")
+- `<0x...>`: Your EVM private key (must start with `0x`, 66 characters total)
+- The CLI derives and displays the public address for verification
+- First wallet added is automatically activated
+
+**Example**:
+```bash
+monid wallet add --label testnet --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+# Output:
+# ✓ Wallet added successfully
+#   Label:   testnet
+#   Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+#   Status:  Activated
+```
+
+#### List Wallets
+
+```bash
+monid wallet list
+```
+
+Shows all configured wallets with activation status (marked with `*`), label, and public address.
+
+#### Activate a Wallet
+
+```bash
+monid wallet activate --label <name>
+```
+
+Set which wallet to use for x402 payments. Only one wallet can be active at a time.
+
+#### Remove a Wallet
+
+```bash
+monid wallet remove --label <name>
+```
+
+Removes the wallet from config and deletes the encrypted key file from disk.
+
+#### Wallet Security Notes
+
+- Private keys are encrypted with AES-256-GCM before being stored
+- Encryption password is derived from system credentials (username@hostname) — keys are **not portable** between machines
+- Encrypted key files have `0600` permissions (owner read/write only)
+- The public address is stored in plaintext in `~/.monid/config.yaml` (safe to expose)
+- Never share your private key or the encrypted wallet files
+
+### Executing x402 Search
+
+```bash
+monid x402 search \
+  --name <name> \
+  --query <query> \
+  --output-schema <schema> \
+  [--description <desc>] \
+  [--output <file>]
+```
+
+**Required flags**:
+- `--name` / `-n`: Search name (descriptive label)
+- `--query` / `-q`: Natural language query describing what data to collect
+- `--output-schema` / `-s`: JSON schema defining expected output (inline JSON or file path)
+
+**Optional flags**:
+- `--description` / `-d`: Additional description for the search
+- `--output` / `-o`: Save results to a file
+
+**Important differences from standard search**:
+- No `--wait` flag (execution is always synchronous — it blocks until complete, 1-120 seconds)
+- No `--task-id` or `--quote-id` flags (no task/quote system — payment is per-request)
+- No `--yes` flag (no price confirmation needed — payment is automatic)
+- The same output schema guidelines apply (see "Output Schema Guidelines" section below)
+
+### x402 Search Example
+
+**User request**: "Anonymously find recent tweets about Bitcoin without creating an account"
+
+**Step 1: Verify request feasibility**
+- Platform: X (Twitter) - SUPPORTED
+- Capability: X Tweet Scraper - EXISTS
+- Feasible: Yes
+
+**Step 2: Ensure wallet is set up**
+```bash
+# Check if wallet exists
+monid wallet list
+
+# If no wallet, add one
+monid wallet add --label main --private-key <0x-your-private-key>
+```
+
+**Step 3: Execute x402 search**
+```bash
+monid x402 search \
+  --name "Bitcoin Tweets" \
+  --query "Find the 50 most recent tweets about Bitcoin from the past 3 days" \
+  --output-schema '{
+    "type": "object",
+    "properties": {
+      "tweets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "text": {"type": "string"},
+            "author": {"type": "string"},
+            "created_at": {"type": "string"},
+            "likes": {"type": "number"},
+            "retweets": {"type": "number"}
+          }
+        }
+      }
+    }
+  }' \
+  --output bitcoin_tweets.json
+```
+
+The command will:
+1. Load your active wallet and decrypt the private key
+2. Send the search request to the x402 endpoint
+3. Automatically handle the 402 payment (sign USDC authorization)
+4. Block until results are returned (1-120 seconds)
+5. Display results and save to `bitcoin_tweets.json`
+
+### x402 Agent Guidance
+
+Because x402 search is **synchronous only**, agents should be aware of the following:
+
+- **Execution blocks for 1-120 seconds** — there is no async mode for x402
+- **Communicate timing expectations** to the user before executing:
+  ```
+  "I'm going to run an anonymous x402 search. This will take 10-120 seconds 
+  and will block until complete. The search cost will be paid directly from 
+  your wallet in USDC."
+  ```
+- **No execution polling** — you cannot start the search in the background and check later
+- **No execution-id** — results are returned inline; if the command fails or is interrupted, you must re-run it
+- **Always use `--output`** to save results to a file so they aren't lost
+- For long-running or complex tasks where async is preferred, guide the user to set up a Monid account and use standard `monid search` instead
+
+### Troubleshooting x402
+
+#### "No wallets configured" / "No wallet activated"
+**Solution**: Add and activate a wallet:
+```bash
+monid wallet add --label main --private-key <0x...>
+# First wallet is auto-activated; otherwise:
+monid wallet activate --label main
+```
+
+#### "Payment is still required after retry"
+**Cause**: Insufficient USDC balance in wallet, or the facilitator rejected the payment.
+
+**Solution**:
+1. Check your wallet balance on a block explorer (the wallet address is shown in `monid wallet list`)
+2. Ensure you have both USDC (for payment) and ETH (for gas)
+3. For testnet:
+   - Get USDC: https://faucet.circle.com/ (select Base Sepolia)
+   - Get ETH: https://www.alchemy.com/faucets/base-sepolia
+
+#### "Network not supported"
+**Cause**: The server requested a blockchain network that the x402 client doesn't support.
+
+**Solution**: This is typically a server-side configuration issue. The x402 client supports any EVM-compatible chain (eip155:*), so this error is rare. Contact support if it persists.
+
+#### "Decryption failed"
+**Cause**: The encrypted wallet key cannot be decrypted. This happens when:
+- The wallet was added on a different machine (encryption is machine-specific)
+- Your system username or hostname changed since the wallet was added
+
+**Solution**: Remove the wallet and re-add it:
+```bash
+monid wallet remove --label <name>
+monid wallet add --label <name> --private-key <0x...>
+```
+
+#### "Failed to initialize x402 client"
+**Cause**: Problem loading the wallet or setting up the payment client.
+
+**Solution**:
+1. Verify wallet exists: `monid wallet list`
+2. Try removing and re-adding the wallet
+3. Ensure your private key is valid (0x-prefixed, 64 hex characters)
+
+---
 
 ## Supported Capabilities
 
@@ -1374,6 +1637,26 @@ monid search \
 
 When a user asks for data collection:
 
+### 0. Determine Execution Mode
+
+- **Does the user want anonymous/x402 search (no account, crypto payment)?**
+  - YES → Skip to **x402 Flow** below
+  - NO or unsure → Continue with standard flow (Step 1)
+
+**Indicators the user wants x402**:
+- Mentions "anonymous", "no account", "crypto", "wallet", "USDC", "x402"
+- Explicitly does not want to create a Monid account
+- Wants to pay per-request with cryptocurrency
+
+**x402 Flow**:
+1. Verify platform/capability support (same as Steps 1-3 below)
+2. Check wallet: `monid wallet list`
+   - No wallet → Guide through `monid wallet add --label main --private-key <0x...>`
+   - Need testnet funds → Link to faucets (USDC: https://faucet.circle.com/, ETH: https://www.alchemy.com/faucets/base-sepolia)
+3. Execute: `monid x402 search --name "..." --query "..." --output-schema '{...}' --output results.json`
+4. Warn user: "This will block for 1-120 seconds. Payment is automatic from your wallet."
+5. Return results when complete
+
 ### 1. Verify Platform Support
 - **Is the platform in the supported list?**
   - NO → ❌ **STOP**. Inform user Monid doesn't support that platform. List supported platforms.
@@ -1453,6 +1736,7 @@ When a user asks for data collection:
 
 Monid enables agents and LLMs to help users collect data from social media, e-commerce, and search platforms through a simple CLI workflow:
 
+**Standard mode** (API key):
 1. **Verify feasibility** (CRITICAL): Check platform and capability support BEFORE attempting
 2. **Install CLI** (one-time): `curl -fsSL https://raw.githubusercontent.com/FeiyouG/monid-client/main/install.sh | bash`
 3. **Setup API key** (one-time):
@@ -1462,19 +1746,34 @@ Monid enables agents and LLMs to help users collect data from social media, e-co
 4. **Execute searches**: Use natural language queries with structured output schemas
 5. **Monitor results**: Track execution status and download data
 
+**x402 anonymous mode** (crypto wallet):
+1. **Verify feasibility** (same as standard)
+2. **Install CLI** (same as standard)
+3. **Setup wallet** (one-time): `monid wallet add --label main --private-key <0x...>`
+   - Requires EVM wallet with USDC (payment) + ETH (gas)
+   - No Monid account needed
+4. **Execute searches**: `monid x402 search --name "..." --query "..." --output-schema '{...}' --output results.json`
+   - Synchronous only (blocks 1-120 seconds) — payment is automatic from wallet
+
 ### Always Remember
 
 ✅ **Verify FIRST**: Platform supported → Capability exists → Request feasible
 ✅ **Stop if verification fails**: Don't proceed with unsupported requests
 ✅ **Be explicit**: Tell users clearly what IS and ISN'T possible
-✅ **Check installation**: Verify CLI is installed with API key configured
+✅ **Check installation**: Verify CLI is installed with API key or wallet configured
 ✅ **Get API keys from web dashboard**: https://app.monid.ai/access/api-keys
 ✅ **Validate API key format**: Must be `monid_<stage>_<key>`
 ✅ **Design realistic schemas**: Match expected data structure
 ✅ **Save results**: Always use `--output` flag
+✅ **x402 is synchronous only**: Blocks for 1-120 seconds — warn users before executing
+✅ **x402 requires a funded wallet**: USDC for payment + ETH for gas
+✅ **For agents using x402**: Communicate timing expectations — the command blocks, there is no async mode
 
 ❌ **NEVER suggest unsupported platforms or capabilities**
 ❌ **NEVER make up capability IDs**
 ❌ **NEVER proceed if verification fails**
+❌ **NEVER use x402 expecting async behavior** — it is synchronous only
 
 **Supported platforms only**: X (Twitter), Instagram, TikTok, LinkedIn, YouTube, Facebook, Amazon, Google Maps - that's it. Nothing else.
+
+**Two execution modes**: Standard (`monid search` with API key) or x402 (`monid x402 search` with crypto wallet, anonymous, synchronous only).
