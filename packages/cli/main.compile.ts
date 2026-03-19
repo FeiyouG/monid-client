@@ -20,7 +20,7 @@ import { walletCommand } from "./commands/wallet/mod.ts";
 import { tasksCommand } from "./commands/tasks/mod.ts";
 import { quotesCommand } from "./commands/quotes/mod.ts";
 import { searchCommand } from "./commands/search/mod.ts";
-import { searchesCommand } from "./commands/searches/mod.ts";
+import { x402Command } from "./commands/x402/mod.ts";
 import { executionsCommand } from "./commands/executions/mod.ts";
 
 await new Command()
@@ -35,7 +35,7 @@ await new Command()
   .command("tasks", tasksCommand)
   .command("quotes", quotesCommand)
   .command("search", searchCommand)
-  .command("searches", searchesCommand)
+  .command("x402", x402Command)
   .command("executions", executionsCommand)
   
   // Add shell completions command

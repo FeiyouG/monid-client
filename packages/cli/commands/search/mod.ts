@@ -48,7 +48,7 @@ export const searchCommand = new Command()
     "Wait for completion (optional timeout in seconds)",
   )
   .option("-o, --output <file:string>", "Save results to file")
-  .action(async (options) => {
+  .action(async (options: Record<string, unknown>) => {
     try {
       const client = getCliCoreClient();
       const quote = await resolveQuote(options);
@@ -72,7 +72,7 @@ export const searchCommand = new Command()
       console.log("");
 
       if (options.wait !== undefined) {
-        displayExecutionResult(result.execution, options.output);
+        displayExecutionResult(result.execution, options.output as string | undefined);
       } else {
         console.log(`Status: ${statusBadge(result.execution.status)}`);
         console.log("");
