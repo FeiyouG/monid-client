@@ -14,10 +14,12 @@ const CONFIG_DIR = join(HOME_DIR, ".monid");
 const CONFIG_FILE = join(CONFIG_DIR, "config.yaml");
 const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials");
 const KEYS_DIR = join(CONFIG_DIR, "keys");
+const WALLETS_DIR = join(CONFIG_DIR, "wallets");
 
 export async function ensureConfigDir(): Promise<void> {
   await ensureDir(CONFIG_DIR);
   await ensureDir(KEYS_DIR);
+  await ensureDir(WALLETS_DIR);
 }
 
 export async function loadConfig(): Promise<Config | null> {
@@ -85,6 +87,11 @@ export async function getKeysDir(workspaceId?: string): Promise<string> {
     return dir;
   }
   return KEYS_DIR;
+}
+
+export async function getWalletsDir(): Promise<string> {
+  await ensureConfigDir();
+  return WALLETS_DIR;
 }
 
 export async function deleteConfig(): Promise<void> {

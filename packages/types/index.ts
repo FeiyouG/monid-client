@@ -5,11 +5,19 @@
 // Union type for all keys
 export type UnifiedKeyConfig = VerificationKeyConfig | ApiKeyConfig;
 
+export interface WalletConfig {
+  type: "wallet";
+  label: string;
+  address: string;  // Derived 0x public address for display
+}
+
 export interface Config {
   version: string;
   workspace?: WorkspaceConfig;
   keys: UnifiedKeyConfig[];
   activated_key?: string;
+  wallets?: WalletConfig[];
+  activated_wallet?: string;
   auth?: AuthInfo;
 }
 

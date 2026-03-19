@@ -13,9 +13,11 @@ import { Command } from "@cliffy/command";
 import { CompletionsCommand } from "@cliffy/command/completions";
 import { VERSION } from "@monid/core";
 import { keysCommand } from "./commands/keys/mod.ts";
+import { walletCommand } from "./commands/wallet/mod.ts";
 import { tasksCommand } from "./commands/tasks/mod.ts";
 import { quotesCommand } from "./commands/quotes/mod.ts";
 import { searchCommand } from "./commands/search/mod.ts";
+import { searchesCommand } from "./commands/searches/mod.ts";
 import { executionsCommand } from "./commands/executions/mod.ts";
 
 await new Command()
@@ -26,9 +28,11 @@ await new Command()
   // Register all commands
   // .command("auth", authCommand)
   .command("keys", keysCommand)
+  .command("wallet", walletCommand)
   .command("tasks", tasksCommand)
   .command("quotes", quotesCommand)
   .command("search", searchCommand)
+  .command("searches", searchesCommand)
   .command("executions", executionsCommand)
   
   // Add shell completions command

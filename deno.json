@@ -46,7 +46,14 @@
     "@std/dotenv": "jsr:@std/dotenv@1",
     "@cliffy/command": "jsr:@cliffy/command@^1.0.0",
     "@cliffy/prompt": "jsr:@cliffy/prompt@^1.0.0",
-    "@cliffy/table": "jsr:@cliffy/table@^1.0.0"
+    "@cliffy/table": "jsr:@cliffy/table@^1.0.0",
+    "@x402/fetch": "npm:@x402/fetch",
+    "@x402/core/client": "npm:@x402/core/client",
+    "@x402/evm": "npm:@x402/evm",
+    "@x402/evm/exact/client": "npm:@x402/evm/exact/client",
+    "viem": "npm:viem",
+    "viem/chains": "npm:viem/chains",
+    "viem/accounts": "npm:viem/accounts"
   },
   "compilerOptions": {
     "lib": ["deno.window", "deno.unstable"]
