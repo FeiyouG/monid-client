@@ -24,9 +24,9 @@ Requires a Monid account and API key. Supports both synchronous and asynchronous
 **Anonymous, pay-per-request** execution via crypto wallet:
 1. **Configure a wallet** (one-time: add an EVM private key)
 2. **Execute the search** (payment is handled automatically via USDC)
-3. **Get results immediately** (synchronous only)
+3. **Poll for results** (use `--wait` or check with `monid x402 execution get`)
 
-No Monid account or API key required. Requires an EVM wallet with USDC and ETH for gas. Execution is **synchronous only** and takes 1-120 seconds (blocks until complete).
+No Monid account or API key required. Requires an EVM wallet with USDC and ETH for gas. Supports both async (default) and sync (`--wait`) execution. Polling uses SIWX (Sign-In with X) authentication to prove wallet ownership.
 
 ## 🚨 CRITICAL: Verify Capabilities Before Query Execution
 
@@ -235,11 +235,11 @@ This all happens transparently — from the user's perspective, you just run a c
 | Authentication | API key | EVM wallet (crypto) |
 | Account required | Yes (monid.ai account) | **No (anonymous)** |
 | Payment | Pre-quoted, billed to account | Direct USDC from wallet |
-| Execution mode | Sync or async | **Synchronous only** |
+| Execution mode | Sync or async | Async (default) or sync (`--wait`) |
 | Execution time | 1-120 seconds | 1-120 seconds |
-| `--wait` flag | Supported | Not needed (always synchronous) |
+| `--wait` flag | Supported | Supported |
 | `--task-id` / `--quote-id` | Supported | Not supported |
-| Async polling | Yes (`monid executions get`) | No |
+| Execution polling | `monid executions get` | `monid x402 execution get` (SIWX auth) |
 
 **Use x402 when**:
 - User does not have or want a Monid account
@@ -333,6 +333,7 @@ monid x402 search \
   --query <query> \
   --output-schema <schema> \
   [--description <desc>] \
+  [--wait [timeout]] \
   [--output <file>]
 ```
 
@@ -343,13 +344,34 @@ monid x402 search \
 
 **Optional flags**:
 - `--description` / `-d`: Additional description for the search
-- `--output` / `-o`: Save results to a file
+- `--wait` / `-w`: Wait for completion. Optionally specify timeout in seconds (e.g., `--wait 120`). Without this flag, the command returns the execution ID immediately.
+- `--output` / `-o`: Save results to a file (only useful with `--wait`)
 
 **Important differences from standard search**:
-- No `--wait` flag (execution is always synchronous — it blocks until complete, 1-120 seconds)
 - No `--task-id` or `--quote-id` flags (no task/quote system — payment is per-request)
 - No `--yes` flag (no price confirmation needed — payment is automatic)
+- Polling uses SIWX authentication (wallet signs a message to prove ownership)
 - The same output schema guidelines apply (see "Output Schema Guidelines" section below)
+
+### Checking x402 Execution Status
+
+After starting an x402 search without `--wait`, use `monid x402 execution get` to check on it:
+
+```bash
+# Check current status (single request, returns immediately)
+monid x402 execution get --execution-id <execution-id>
+
+# Wait for completion (polls with exponential backoff)
+monid x402 execution get --execution-id <execution-id> --wait
+
+# Wait with timeout (in seconds)
+monid x402 execution get --execution-id <execution-id> --wait 120
+
+# Save results to file when complete
+monid x402 execution get --execution-id <execution-id> --wait --output results.json
+```
+
+Each status check is authenticated via SIWX — your wallet signs a message proving you own the execution. No additional payment is required for polling.
 
 ### x402 Search Example
 
@@ -371,6 +393,7 @@ monid wallet add --label main --private-key <0x-your-private-key>
 
 **Step 3: Execute x402 search**
 ```bash
+# Option A: Wait for results (blocks until complete)
 monid x402 search \
   --name "Bitcoin Tweets" \
   --query "Find the 50 most recent tweets about Bitcoin from the past 3 days" \
@@ -392,31 +415,55 @@ monid x402 search \
       }
     }
   }' \
+  --wait \
   --output bitcoin_tweets.json
+
+# Option B: Start async, check later
+monid x402 search \
+  --name "Bitcoin Tweets" \
+  --query "Find the 50 most recent tweets about Bitcoin from the past 3 days" \
+  --output-schema '{"type":"object","properties":{"tweets":{"type":"array"}}}'
+# Returns: ✓ Execution started: exec_abc123
+# Later:
+monid x402 execution get --execution-id exec_abc123 --wait --output bitcoin_tweets.json
 ```
 
 The command will:
 1. Load your active wallet and decrypt the private key
 2. Send the search request to the x402 endpoint
 3. Automatically handle the 402 payment (sign USDC authorization)
-4. Block until results are returned (1-120 seconds)
-5. Display results and save to `bitcoin_tweets.json`
+4. Return an execution ID (async) or poll for results (with `--wait`)
+5. Display results and save to file when complete
 
 ### x402 Agent Guidance
 
-Because x402 search is **synchronous only**, agents should be aware of the following:
+x402 search now supports both async and sync (`--wait`) execution. Agents should follow similar patterns as standard search:
 
-- **Execution blocks for 1-120 seconds** — there is no async mode for x402
-- **Communicate timing expectations** to the user before executing:
-  ```
-  "I'm going to run an anonymous x402 search. This will take 10-120 seconds 
-  and will block until complete. The search cost will be paid directly from 
-  your wallet in USDC."
-  ```
-- **No execution polling** — you cannot start the search in the background and check later
-- **No execution-id** — results are returned inline; if the command fails or is interrupted, you must re-run it
-- **Always use `--output`** to save results to a file so they aren't lost
-- For long-running or complex tasks where async is preferred, guide the user to set up a Monid account and use standard `monid search` instead
+**Async pattern (recommended for agents)**:
+```bash
+# Start search (returns immediately with execution-id)
+monid x402 search --name "My Search" --query "..." --output-schema '{...}'
+# Output: ✓ Execution started: exec_abc123
+# → Check status: monid x402 execution get --execution-id exec_abc123
+
+# Poll for status later
+monid x402 execution get --execution-id exec_abc123
+
+# When ready, retrieve results
+monid x402 execution get --execution-id exec_abc123 --wait --output results.json
+```
+
+**Sync pattern (simple queries)**:
+```bash
+# Block until complete (1-120 seconds)
+monid x402 search --name "..." --query "..." --output-schema '{...}' --wait --output results.json
+```
+
+**Key differences from standard search async**:
+- Each poll request uses **SIWX authentication** (wallet signs a message) instead of API key auth
+- The execution is tied to the wallet address, not a Monid account
+- Use `monid x402 execution get` instead of `monid executions get`
+- **Always use `--output`** to save results to a file
 
 ### Troubleshooting x402
 
@@ -1653,9 +1700,10 @@ When a user asks for data collection:
 2. Check wallet: `monid wallet list`
    - No wallet → Guide through `monid wallet add --label main --private-key <0x...>`
    - Need testnet funds → Link to faucets (USDC: https://faucet.circle.com/, ETH: https://www.alchemy.com/faucets/base-sepolia)
-3. Execute: `monid x402 search --name "..." --query "..." --output-schema '{...}' --output results.json`
-4. Warn user: "This will block for 1-120 seconds. Payment is automatic from your wallet."
-5. Return results when complete
+3. Execute: `monid x402 search --name "..." --query "..." --output-schema '{...}' --wait --output results.json`
+   - With `--wait`: blocks until results are ready (1-120 seconds)
+   - Without `--wait`: returns execution ID immediately, poll with `monid x402 execution get --execution-id <id> --wait`
+4. Return results when complete
 
 ### 1. Verify Platform Support
 - **Is the platform in the supported list?**
@@ -1752,8 +1800,9 @@ Monid enables agents and LLMs to help users collect data from social media, e-co
 3. **Setup wallet** (one-time): `monid wallet add --label main --private-key <0x...>`
    - Requires EVM wallet with USDC (payment) + ETH (gas)
    - No Monid account needed
-4. **Execute searches**: `monid x402 search --name "..." --query "..." --output-schema '{...}' --output results.json`
-   - Synchronous only (blocks 1-120 seconds) — payment is automatic from wallet
+4. **Execute searches**: `monid x402 search --name "..." --query "..." --output-schema '{...}' --wait --output results.json`
+   - Async (default) or sync (`--wait`) — payment is automatic from wallet
+   - Check status: `monid x402 execution get --execution-id <id> --wait`
 
 ### Always Remember
 
@@ -1765,15 +1814,15 @@ Monid enables agents and LLMs to help users collect data from social media, e-co
 ✅ **Validate API key format**: Must be `monid_<stage>_<key>`
 ✅ **Design realistic schemas**: Match expected data structure
 ✅ **Save results**: Always use `--output` flag
-✅ **x402 is synchronous only**: Blocks for 1-120 seconds — warn users before executing
+✅ **x402 supports async and sync**: Use `--wait` to block, or omit it and poll with `monid x402 execution get`
 ✅ **x402 requires a funded wallet**: USDC for payment + ETH for gas
-✅ **For agents using x402**: Communicate timing expectations — the command blocks, there is no async mode
+✅ **x402 polling uses SIWX auth**: Each status check is signed by the wallet — no additional payment needed
 
 ❌ **NEVER suggest unsupported platforms or capabilities**
 ❌ **NEVER make up capability IDs**
 ❌ **NEVER proceed if verification fails**
-❌ **NEVER use x402 expecting async behavior** — it is synchronous only
+❌ **NEVER use `monid executions get` for x402 executions** — use `monid x402 execution get` instead (requires SIWX auth)
 
 **Supported platforms only**: X (Twitter), Instagram, TikTok, LinkedIn, YouTube, Facebook, Amazon, Google Maps - that's it. Nothing else.
 
-**Two execution modes**: Standard (`monid search` with API key) or x402 (`monid x402 search` with crypto wallet, anonymous, synchronous only).
+**Two execution modes**: Standard (`monid search` with API key) or x402 (`monid x402 search` with crypto wallet, anonymous, supports async and sync).

@@ -51,6 +51,7 @@
     "@x402/core/client": "npm:@x402/core/client",
     "@x402/evm": "npm:@x402/evm",
     "@x402/evm/exact/client": "npm:@x402/evm/exact/client",
+    "@x402/extensions/sign-in-with-x": "npm:@x402/extensions/sign-in-with-x",
     "viem": "npm:viem",
     "viem/chains": "npm:viem/chains",
     "viem/accounts": "npm:viem/accounts"

@@ -1,34 +1,42 @@
 /**
  * x402 search command
- * Executes a search using the x402 protocol for automatic crypto payments.
- * No API key or verification key required - uses an EVM wallet instead.
+ * Executes an async search using the x402 protocol for automatic crypto payments.
+ * The initial POST is paid via x402; subsequent status polling uses SIWX auth.
+ * No API key required - uses an EVM wallet instead.
  */
 
 import { Command } from "@cliffy/command";
 import { CONFIG } from "@monid/core";
 import { parseSchema } from "../../../shared/task-flags.ts";
-import { createX402Fetch, getActiveWalletAddress } from "../../../../lib/x402-client.ts";
+import {
+  createX402Fetch,
+  getActiveWalletAddress,
+  pollX402Execution,
+  type X402Execution,
+} from "../../../../lib/x402-client.ts";
 import {
   error,
   info,
   success,
   prettyJson,
   progressSpinner,
+  statusBadge,
 } from "../../../../utils/display.ts";
+import { displayX402ExecutionResult } from "../execution/get/mod.ts";
 
 export const x402Command = new Command()
   .name("x402")
   .description(
     "Execute a search using x402 protocol (crypto payment)\n\n" +
-    "Sends a search request to the x402 endpoint. If the server responds\n" +
-    "with 402 Payment Required, the x402 client automatically signs a USDC\n" +
-    "payment authorization using the active wallet and retries.\n\n" +
+    "Sends a search request to the x402 endpoint. The server responds with\n" +
+    "an execution ID. Use --wait to poll until results are ready.\n\n" +
     "Requires an activated wallet: monid wallet add --private-key <0x...> --label <name>",
   )
   .option("-n, --name <name:string>", "Search name", { required: true })
   .option("-q, --query <query:string>", "Search query", { required: true })
   .option("-s, --output-schema <schema:string>", "Output schema (JSON string or file path)", { required: true })
   .option("-d, --description <desc:string>", "Search description")
+  .option("-w, --wait [timeout:number]", "Wait for completion (optional timeout in seconds)")
   .option("-o, --output <file:string>", "Save results to file")
   .action(async (options) => {
     try {
@@ -109,40 +117,63 @@ export const x402Command = new Command()
           Deno.exit(1);
         }
 
-        // Parse and display results
-        let responseData: unknown;
+        // Parse the async response
+        let result: X402Execution;
         try {
-          responseData = JSON.parse(responseText);
+          result = JSON.parse(responseText) as X402Execution;
         } catch {
-          responseData = responseText;
+          error("Unexpected response format from server.");
+          console.log(responseText);
+          Deno.exit(1);
         }
 
         // Check for payment settlement info
         const paymentResponse = response.headers.get("payment-response");
-
-        console.log("");
-        success("Search completed successfully!");
-
         if (paymentResponse) {
           info("Payment: settled via x402");
         }
 
+        const executionId = result.executionId;
+        if (!executionId) {
+          // Fallback: server returned results directly (sync response)
+          console.log("");
+          success("Search completed successfully!");
+          console.log("");
+          console.log("Results:");
+          console.log(prettyJson(result));
+          console.log("");
+          saveToFile(result, options.output);
+          return;
+        }
+
         console.log("");
-        console.log("Results:");
-        console.log(prettyJson(responseData));
+        success(`Execution started: ${executionId}`);
+        console.log(`Status: ${statusBadge(result.status)}`);
         console.log("");
 
-        // Save to file if requested
-        if (options.output) {
+        // If --wait is specified, poll for completion
+        if (options.wait !== undefined) {
+          info("Waiting for completion...");
+          console.log("");
+
+          const timeoutMs = parseWaitTimeout(options.wait);
           try {
-            const outputContent = typeof responseData === "string"
-              ? responseData
-              : JSON.stringify(responseData, null, 2);
-            Deno.writeTextFileSync(options.output, outputContent);
-            success(`Results saved to: ${options.output}`);
+            const finalExecution = await pollX402Execution(
+              executionId,
+              timeoutMs ? { timeoutSeconds: timeoutMs / 1000 } : {},
+            );
+            displayX402ExecutionResult(finalExecution, options.output);
           } catch (err) {
-            error(`Failed to save results: ${err instanceof Error ? err.message : String(err)}`);
+            if (err instanceof Error && err.message.includes("Polling timeout")) {
+              error(err.message);
+              info(`Check later: monid x402 execution get --execution-id ${executionId}`);
+            } else {
+              throw err;
+            }
           }
+        } else {
+          info(`Check status: monid x402 execution get --execution-id ${executionId}`);
+          info(`Wait for results: monid x402 execution get --execution-id ${executionId} --wait`);
         }
       } catch (err) {
         reqSpinner.stop();
@@ -172,5 +203,32 @@ function formatBody(body: string): string {
     return JSON.stringify(JSON.parse(body), null, 2);
   } catch {
     return body;
+  }
+}
+
+/**
+ * Parse the --wait flag value into milliseconds.
+ */
+function parseWaitTimeout(wait: boolean | number | undefined): number | undefined {
+  if (wait === undefined || wait === true) {
+    return undefined; // No timeout (unlimited)
+  }
+  if (typeof wait === "number" && Number.isFinite(wait) && wait > 0) {
+    return wait * 1000;
+  }
+  return undefined;
+}
+
+/**
+ * Save response data to file if output path is specified.
+ */
+function saveToFile(data: unknown, outputPath?: string): void {
+  if (!outputPath) return;
+  try {
+    const content = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+    Deno.writeTextFileSync(outputPath, content);
+    success(`Results saved to: ${outputPath}`);
+  } catch (err) {
+    error(`Failed to save results: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
