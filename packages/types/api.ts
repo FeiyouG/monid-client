@@ -20,19 +20,9 @@ export interface RunError {
   code?: string; // e.g. "RATE_LIMITED", "TIMEOUT"
 }
 
-export interface ApiErrorResponse {
-  code: number;
-  message: string;
-}
-
 // ---------------------------------------------------------------------------
 // POST /v1/discover
 // ---------------------------------------------------------------------------
-
-export interface DiscoverRequest {
-  query: string;
-  limit?: number; // 1-20, default 5
-}
 
 export interface DiscoverResult {
   id: string;
@@ -51,11 +41,6 @@ export interface DiscoverResponse {
 // ---------------------------------------------------------------------------
 // POST /v1/inspect
 // ---------------------------------------------------------------------------
-
-export interface InspectRequest {
-  provider: string;
-  endpoint: string;
-}
 
 export interface InspectResponse {
   id: string;

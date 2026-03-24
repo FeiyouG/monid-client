@@ -70,24 +70,6 @@ export async function exchangeCodeForToken(
   return tokens;
 }
 
-// Decode JWT (simple, not verifying signature - we trust the OAuth provider)
-export function decodeJWT(token: string): Record<string, unknown> {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
-    throw new Error("Invalid JWT format");
-  }
-
-  try {
-    // Add padding if needed
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
-    const decoded = atob(padded);
-    return JSON.parse(decoded);
-  } catch (error) {
-    throw new Error(`Failed to decode JWT: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
 // Start local callback server
 export async function startCallbackServer(): Promise<{ port: number, promise: Promise<string> }> {
   const port = 8918; // Fixed port from config

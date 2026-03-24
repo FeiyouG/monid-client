@@ -7,6 +7,7 @@ import { loadConfig, saveConfig } from "../../../../lib/config.ts";
 import { success, error, info } from "../../../../utils/display.ts";
 import { obfuscateApiKey } from "../../../../utils/obfuscate.ts";
 import { decryptData, generateSystemPassword } from "../../../../lib/crypto.ts";
+import { findKeyByIdentifier } from "../../../../utils/fingerprint.ts";
 
 export const activateCommand = new Command()
   .name("activate")
@@ -34,17 +35,7 @@ export const activateCommand = new Command()
       }
       
       // Find key by label or fingerprint
-      let targetKey;
-      
-      if (options.label) {
-        targetKey = config.keys.find(k => k.label === options.label);
-      } else if (options.fingerprint) {
-        // Only verification keys have fingerprints
-        targetKey = config.keys.find(k => 
-          k.type === "verification" && 
-          (k.fingerprint === options.fingerprint || k.fingerprint_short === options.fingerprint)
-        );
-      }
+      const targetKey = findKeyByIdentifier(config.keys, options);
       
       if (!targetKey) {
         error(`Key '${identifier}' not found`);

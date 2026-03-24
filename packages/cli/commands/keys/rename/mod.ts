@@ -6,6 +6,7 @@ import { Command } from "@cliffy/command";
 import { join } from "@std/path";
 import { loadConfig, saveConfig, getKeysDir } from "../../../../lib/config.ts";
 import { success, error, info } from "../../../../utils/display.ts";
+import { findKeyByIdentifier } from "../../../../utils/fingerprint.ts";
 
 export const renameCommand = new Command()
   .name("rename")
@@ -42,17 +43,10 @@ export const renameCommand = new Command()
       }
       
       // Find key by label or fingerprint
-      let targetKey;
-      
-      if (options.oldLabel) {
-        targetKey = config.keys.find(k => k.label === options.oldLabel);
-      } else if (options.oldFingerprint) {
-        // Only verification keys have fingerprints
-        targetKey = config.keys.find(k => 
-          k.type === "verification" && 
-          (k.fingerprint === options.oldFingerprint || k.fingerprint_short === options.oldFingerprint)
-        );
-      }
+      const targetKey = findKeyByIdentifier(config.keys, {
+        label: options.oldLabel,
+        fingerprint: options.oldFingerprint,
+      });
       
       if (!targetKey) {
         error(`Key '${identifier}' not found`);

@@ -4,7 +4,7 @@
  */
 
 import { encodeBase64 } from "@std/encoding/base64";
-import type { KeyConfig } from "../types/index.ts";
+import type { UnifiedKeyConfig } from "../types/index.ts";
 
 export async function generateFingerprint(publicKeyRaw: Uint8Array): Promise<string> {
   // Hash the raw public key with SHA-256
@@ -64,43 +64,22 @@ export function getShortFingerprint(fingerprintSha256: string): string {
 }
 
 /**
- * Check if a fingerprint matches (supports short or full fingerprint)
- *
- * @param keyFingerprint - Full fingerprint from key config
- * @param searchFingerprint - User-provided fingerprint (short or full)
- * @returns True if fingerprints match
+ * Find a key by label or fingerprint from a unified key list.
+ * Searches by exact label match first, then by fingerprint (full or short)
+ * for verification keys.
  */
-export function matchesFingerprint(
-  keyFingerprint: string,
-  searchFingerprint: string
-): boolean {
-  // Exact match on full fingerprint
-  if (keyFingerprint === searchFingerprint) return true;
-  
-  // Match on short fingerprint
-  const keyShort = getShortFingerprint(keyFingerprint);
-  const searchShort = searchFingerprint.startsWith("SHA256:")
-    ? getShortFingerprint(searchFingerprint)
-    : searchFingerprint;
-  
-  return keyShort === searchShort;
-}
-
-/**
- * Find key by label or fingerprint (short or full)
- *
- * @param keys - Array of key configs
- * @param identifier - Label or fingerprint to search for
- * @returns Matching key or undefined
- */
-export function findKeyByLabelOrFingerprint(
-  keys: KeyConfig[],
-  identifier: string
-): KeyConfig | undefined {
-  // Try exact label match first
-  const byLabel = keys.find(k => k.label === identifier);
-  if (byLabel) return byLabel;
-  
-  // Try fingerprint match (short or full)
-  return keys.find(k => matchesFingerprint(k.fingerprint, identifier));
+export function findKeyByIdentifier(
+  keys: UnifiedKeyConfig[],
+  options: { label?: string; fingerprint?: string }
+): UnifiedKeyConfig | undefined {
+  if (options.label) {
+    return keys.find(k => k.label === options.label);
+  }
+  if (options.fingerprint) {
+    return keys.find(k =>
+      k.type === "verification" &&
+      (k.fingerprint === options.fingerprint || k.fingerprint_short === options.fingerprint)
+    );
+  }
+  return undefined;
 }

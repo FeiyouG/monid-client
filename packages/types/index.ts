@@ -46,9 +46,6 @@ export interface VerificationKeyConfig {
   expires_at?: string;
 }
 
-// Legacy export for backward compatibility
-export type KeyConfig = VerificationKeyConfig;
-
 export interface AuthInfo {
   last_login: string;
   user_email?: string;
@@ -61,13 +58,6 @@ export interface OAuthTokenResponse {
   id_token?: string;
   token_type: string;
   expires_in: number;
-}
-
-export interface WhoAmIResponse {
-  user_id: string;
-  workspace_id: string;
-  workspace_name: string;
-  email: string;
 }
 
 export interface WorkspaceSummary {

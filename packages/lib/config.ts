@@ -70,10 +70,6 @@ export async function saveConfig(config: Config): Promise<void> {
   }
 }
 
-export async function getConfigPath(): Promise<string> {
-  return CONFIG_FILE;
-}
-
 export async function getCredentialsPath(): Promise<string> {
   await ensureConfigDir();
   return CREDENTIALS_FILE;

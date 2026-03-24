@@ -3,12 +3,12 @@
  * Ed25519 key generation and management
  */
 
-export interface KeyPair {
+interface KeyPair {
   publicKey: CryptoKey;
   privateKey: CryptoKey;
 }
 
-export interface ExportedKeyPair {
+interface ExportedKeyPair {
   publicKeyPEM: string;
   privateKeyPEM: string;
   publicKeyRaw: Uint8Array;

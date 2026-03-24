@@ -14,7 +14,6 @@ import { CompletionsCommand } from "@cliffy/command/completions";
 import { VERSION } from "@monid/core";
 
 // Import commands - they will use hardcoded config in compiled binary
-import { authCommand } from "./commands/auth/mod.ts";
 import { keysCommand } from "./commands/keys/mod.ts";
 import { walletCommand } from "./commands/wallet/mod.ts";
 import { discoverCommand } from "./commands/discover/mod.ts";
@@ -29,7 +28,6 @@ await new Command()
   .description("Monid CLI - Agentic payment platform for executing AI-powered data endpoints")
   
   // Register all commands
-  .command("auth", authCommand)
   .command("keys", keysCommand)
   .command("wallet", walletCommand)
   .command("discover", discoverCommand)

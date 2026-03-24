@@ -8,7 +8,7 @@ import { loadConfig, getKeysDir } from "./config.ts";
 import { decryptData, generateSystemPassword, importPrivateKey, sign } from "./crypto.ts";
 import { generateNonce } from "../utils/nonce.ts";
 
-export interface SignatureHeaders {
+interface SignatureHeaders {
   "X-Workspace-ID": string;
   "X-Key-Fingerprint": string;
   "X-Signature-Algorithm": string;
@@ -17,7 +17,7 @@ export interface SignatureHeaders {
   "X-Signature": string;
 }
 
-export interface SignatureComponents {
+interface SignatureComponents {
   workspaceId: string;
   keyFingerprint: string;
   timestamp: number;

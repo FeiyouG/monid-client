@@ -14,7 +14,4 @@ export class CoreClient {
     this.runs = new RunsCore(transport);
   }
 
-  getTransport(): CoreTransport {
-    return this.transport;
-  }
 }

@@ -12,11 +12,8 @@ import { removeCommand } from "./remove/mod.ts";
 export const keysCommand = new Command()
   .name("keys")
   .description("API key management")
-  // .command("generate", generateCommand)
   .command("add", addCommand)
   .command("list", listCommand)
   .command("activate", activateCommand)
-  // .command("delete", deleteCommand)
   .command("remove", removeCommand)
-  .command("rename", renameCommand)
-  // .command("revoke", revokeCommand);
+  .command("rename", renameCommand);

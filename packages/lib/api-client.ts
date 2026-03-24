@@ -8,12 +8,7 @@ import { getAccessToken } from "./credentials.ts";
 import { signRequest } from "./signing.ts";
 import { decryptData, generateSystemPassword } from "./crypto.ts";
 
-export interface ApiError {
-  code: number;
-  message: string;
-}
-
-export interface ApiRequestOptions {
+interface ApiRequestOptions {
   useOAuth?: boolean;  // Force OAuth instead of signature auth
   headers?: Record<string, string>;  // Additional headers
 }
@@ -178,44 +173,4 @@ async function handleApiError(response: Response): Promise<never> {
   throw new Error(fullMessage);
 }
 
-/**
- * Make a simple GET request
- */
-export async function apiGet<T>(
-  path: string,
-  options?: ApiRequestOptions
-): Promise<T> {
-  return makeAuthenticatedRequest<T>("GET", path, undefined, options);
-}
 
-/**
- * Make a POST request
- */
-export async function apiPost<T>(
-  path: string,
-  body?: unknown,
-  options?: ApiRequestOptions
-): Promise<T> {
-  return makeAuthenticatedRequest<T>("POST", path, body, options);
-}
-
-/**
- * Make a PATCH request
- */
-export async function apiPatch<T>(
-  path: string,
-  body: unknown,
-  options?: ApiRequestOptions
-): Promise<T> {
-  return makeAuthenticatedRequest<T>("PATCH", path, body, options);
-}
-
-/**
- * Make a DELETE request
- */
-export async function apiDelete(
-  path: string,
-  options?: ApiRequestOptions
-): Promise<void> {
-  return makeAuthenticatedRequest<void>("DELETE", path, undefined, options);
-}
