@@ -3,59 +3,46 @@ import {
   CoreClient,
   type CoreRequestOptions,
   type CoreTransport,
-  type SearchInput,
-  type TaskUpdateInput,
 } from "@monid/core";
 import type {
-  Execution,
-  ExecutionsListResponse,
-  Quote,
-  Task,
-  TaskCreate,
-  TasksListResponse,
+  DiscoverResponse,
+  InspectResponse,
+  RunRequest,
+  RunResponse,
 } from "@monid/types";
 
 export interface ClientOptions {
   apiKey?: string;
 }
 
-export interface ClientTasksApi {
-  create(input: TaskCreate): Promise<Task>;
-  list(options?: { limit?: number; cursor?: string }): Promise<TasksListResponse>;
-  get(taskId: string): Promise<Task>;
-  update(taskId: string, input: TaskUpdateInput): Promise<Task>;
-  delete(taskId: string): Promise<void>;
+export interface ClientDiscoverApi {
+  search(query: string, limit?: number): Promise<DiscoverResponse>;
 }
 
-export interface ClientQuotesApi {
-  get(options: { taskId?: string; taskCreate?: TaskCreate }): Promise<Quote>;
-  getById(quoteId: string): Promise<Quote>;
+export interface ClientInspectApi {
+  get(provider: string, endpoint: string): Promise<InspectResponse>;
 }
 
-export interface ClientExecutionsApi {
-  list(options?: {
-    taskId?: string;
-    limit?: number;
-    cursor?: string;
-  }): Promise<ExecutionsListResponse>;
-  get(executionId: string, wait?: boolean | number): Promise<Execution>;
+export interface ClientRunsApi {
+  start(request: RunRequest): Promise<RunResponse>;
+  get(runId: string): Promise<RunResponse>;
+  waitForCompletion(runId: string, timeoutSec?: number): Promise<RunResponse>;
 }
 
 export interface ClientInterface {
-  tasks: ClientTasksApi;
-  quotes: ClientQuotesApi;
-  executions: ClientExecutionsApi;
-  search(input: SearchInput): Promise<{ quote: Quote; execution: Execution }>;
+  discover: ClientDiscoverApi;
+  inspect: ClientInspectApi;
+  runs: ClientRunsApi;
 }
 
 export class Client implements ClientInterface {
   private readonly core: CoreClient;
 
   constructor(options: ClientOptions = {}) {
-    const apiKey = options.apiKey ?? Deno.env.get("SCOPE_OS_API_KEY");
+    const apiKey = options.apiKey ?? Deno.env.get("MONID_API_KEY");
     if (!apiKey) {
       throw new Error(
-        "Missing API key. Pass apiKey in Client constructor or set SCOPE_OS_API_KEY environment variable.",
+        "Missing API key. Pass apiKey in Client constructor or set MONID_API_KEY environment variable.",
       );
     }
 
@@ -64,35 +51,24 @@ export class Client implements ClientInterface {
     this.core = new CoreClient(transport);
   }
 
-  readonly tasks: ClientTasksApi = {
-    create: (input: TaskCreate): Promise<Task> => this.core.tasks.create(input),
-    list: (options?: { limit?: number; cursor?: string }): Promise<TasksListResponse> =>
-      this.core.tasks.list(options),
-    get: (taskId: string): Promise<Task> => this.core.tasks.get(taskId),
-    update: (taskId: string, input: TaskUpdateInput): Promise<Task> =>
-      this.core.tasks.update(taskId, input),
-    delete: (taskId: string): Promise<void> => this.core.tasks.delete(taskId),
+  readonly discover: ClientDiscoverApi = {
+    search: (query: string, limit?: number): Promise<DiscoverResponse> =>
+      this.core.discover.discover(query, limit),
   };
 
-  readonly quotes: ClientQuotesApi = {
-    get: (options: { taskId?: string; taskCreate?: TaskCreate }): Promise<Quote> =>
-      this.core.quotes.get(options),
-    getById: (quoteId: string): Promise<Quote> => this.core.quotes.getById(quoteId),
+  readonly inspect: ClientInspectApi = {
+    get: (provider: string, endpoint: string): Promise<InspectResponse> =>
+      this.core.inspect.inspect(provider, endpoint),
   };
 
-  readonly executions: ClientExecutionsApi = {
-    list: (options?: {
-      taskId?: string;
-      limit?: number;
-      cursor?: string;
-    }): Promise<ExecutionsListResponse> => this.core.executions.list(options),
-    get: (executionId: string, wait?: boolean | number): Promise<Execution> =>
-      this.core.executions.getWithWait(executionId, wait),
+  readonly runs: ClientRunsApi = {
+    start: (request: RunRequest): Promise<RunResponse> =>
+      this.core.runs.start(request),
+    get: (runId: string): Promise<RunResponse> =>
+      this.core.runs.get(runId),
+    waitForCompletion: (runId: string, timeoutSec?: number): Promise<RunResponse> =>
+      this.core.runs.waitForCompletion(runId, timeoutSec),
   };
-
-  search(input: SearchInput): Promise<{ quote: Quote; execution: Execution }> {
-    return this.core.search.run(input);
-  }
 }
 
 function createBearerTransport(baseUrl: string, apiKey: string): CoreTransport {

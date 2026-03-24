@@ -86,31 +86,6 @@ export interface UserInfo {
   name?: string;
 }
 
-export interface ParsedArgs {
-  _: (string | number)[];
-  [key: string]: unknown;
-  verbose?: boolean;
-  yes?: boolean;
-  label?: string;
-  method?: string;
-  data?: string;
-  key?: string;
-  header?: string[];
-  output?: string;
-  outputSchema?: string;
-  inputSchema?: string;
-  capabilities?: string;
-  input?: string;
-  wait?: boolean | number;
-  limit?: number | string;
-  cursor?: string;
-  title?: string;
-  description?: string;
-  expiresAt?: string;
-}
-
 // Re-export all types
-export * from "./task.ts";
-export * from "./quote.ts";
-export * from "./search.ts";
+export * from "./api.ts";
 export * from "./verification-key.ts";

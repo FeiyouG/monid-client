@@ -3,7 +3,7 @@
  * Provides a fetch wrapper that automatically handles 402 Payment Required
  * responses by signing USDC payment authorizations via an EVM wallet.
  * Also provides SIWX (Sign-In with X) authenticated requests for polling
- * execution status without additional x402 payment.
+ * run status without additional x402 payment.
  */
 
 import { join } from "@std/path";
@@ -21,6 +21,7 @@ import {
 import { baseSepolia } from "viem/chains";
 import { createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import type { RunResponse } from "../types/api.ts";
 
 /**
  * Load and decrypt a wallet's private key from disk.
@@ -110,7 +111,7 @@ export async function createX402Fetch(): Promise<typeof fetch> {
 }
 
 // ---------------------------------------------------------------------------
-// SIWX (Sign-In with X) authenticated requests for execution polling
+// SIWX (Sign-In with X) authenticated requests for run polling
 // ---------------------------------------------------------------------------
 
 /**
@@ -125,22 +126,22 @@ function getApiDomain(): string {
 }
 
 /**
- * Build the execution URL for a given execution ID.
+ * Build the run URL for a given run ID.
  */
-function getExecutionUrl(executionId: string): string {
-  return `${CONFIG.api.endpoint}/x402/v1/executions/${executionId}`;
+function getRunUrl(runId: string): string {
+  return `${CONFIG.api.endpoint}/x402/v1/runs/${runId}`;
 }
 
 /**
- * Create SIWX-authenticated headers for a given execution ID.
+ * Create SIWX-authenticated headers for a given run ID.
  * Signs a SIWX message proving wallet ownership without requiring x402 payment.
  */
-export async function createSIWxHeaders(executionId: string): Promise<Record<string, string>> {
+export async function createSIWxHeaders(runId: string): Promise<Record<string, string>> {
   const walletLabel = await getActiveWalletLabel();
   const privateKey = await loadWalletPrivateKey(walletLabel);
   const signer = privateKeyToAccount(privateKey);
 
-  const uri = getExecutionUrl(executionId);
+  const uri = getRunUrl(runId);
   const domain = getApiDomain();
 
   const nonce = crypto.randomUUID().replace(/-/g, "");
@@ -150,7 +151,7 @@ export async function createSIWxHeaders(executionId: string): Promise<Record<str
     {
       domain,
       uri,
-      statement: "Sign in to access your execution results",
+      statement: "Sign in to access your run results",
       version: "1",
       chainId: "eip155:84532", // Base Sepolia
       type: "eip191" as const,
@@ -166,29 +167,19 @@ export async function createSIWxHeaders(executionId: string): Promise<Record<str
 }
 
 /**
- * Response shape from the x402 execution endpoint.
- */
-export interface X402Execution {
-  executionId: string;
-  status: string;
-  output?: unknown;
-  error?: string;
-  siwx?: {
-    domain: string;
-    uri: string;
-    statement?: string;
-    version?: string;
-  };
-  [key: string]: unknown;
-}
-
-/**
- * Make a single SIWX-authenticated GET request to fetch execution status.
+ * Make a single SIWX-authenticated GET request to fetch run status.
  * No x402 payment is needed — SIWX proves wallet ownership.
+ * Supports server-side long-polling via ?wait=N.
  */
-export async function fetchX402Execution(executionId: string): Promise<X402Execution> {
-  const headers = await createSIWxHeaders(executionId);
-  const url = getExecutionUrl(executionId);
+export async function fetchX402Run(
+  runId: string,
+  waitSeconds?: number,
+): Promise<RunResponse> {
+  const headers = await createSIWxHeaders(runId);
+  let url = getRunUrl(runId);
+  if (waitSeconds !== undefined && waitSeconds > 0) {
+    url += `?wait=${waitSeconds}`;
+  }
 
   const response = await fetch(url, {
     method: "GET",
@@ -203,41 +194,34 @@ export async function fetchX402Execution(executionId: string): Promise<X402Execu
     } catch {
       errorMessage = response.statusText;
     }
-    throw new Error(`Failed to fetch execution (${response.status}): ${errorMessage}`);
+    throw new Error(`Failed to fetch run (${response.status}): ${errorMessage}`);
   }
 
-  return await response.json() as X402Execution;
+  return await response.json() as RunResponse;
 }
 
 /**
- * Poll an x402 execution until it reaches a terminal state (COMPLETED or FAILED).
- * Uses exponential backoff consistent with the standard polling infrastructure.
+ * Wait for an x402 run to reach a terminal state (COMPLETED or FAILED).
+ * Uses server-side long-polling (?wait=30) in a loop.
  */
-export async function pollX402Execution(
-  executionId: string,
-  options: { timeoutSeconds?: number; initialDelayMs?: number; maxDelayMs?: number } = {},
-): Promise<X402Execution> {
-  const initialDelayMs = options.initialDelayMs ?? 2000;
-  const maxDelayMs = options.maxDelayMs ?? 30000;
-  const timeoutMs = options.timeoutSeconds !== undefined
-    ? options.timeoutSeconds * 1000
-    : 300000; // 5 minutes default
-
-  const startTime = Date.now();
-  let delay = initialDelayMs;
+export async function waitForX402Run(
+  runId: string,
+  totalTimeoutSec?: number,
+): Promise<RunResponse> {
+  const POLL_WAIT = 30; // seconds per server long-poll
+  const timeout = totalTimeoutSec ?? 300; // 5 minutes default
+  const start = Date.now();
 
   while (true) {
-    const execution = await fetchX402Execution(executionId);
+    const run = await fetchX402Run(runId, POLL_WAIT);
 
-    if (execution.status === "COMPLETED" || execution.status === "FAILED") {
-      return execution;
+    if (run.status === "COMPLETED" || run.status === "FAILED") {
+      return run;
     }
 
-    if (Date.now() - startTime > timeoutMs) {
-      throw new Error(`Polling timeout after ${Math.floor(timeoutMs / 1000)} seconds`);
+    const elapsed = (Date.now() - start) / 1000;
+    if (elapsed >= timeout) {
+      throw new Error(`Timeout after ${timeout}s waiting for run ${runId}`);
     }
-
-    await new Promise((resolve) => setTimeout(resolve, delay));
-    delay = Math.min(delay * 2, maxDelayMs);
   }
 }

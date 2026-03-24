@@ -1,20 +1,17 @@
 import type { CoreTransport } from "./http/transport.ts";
-import { ExecutionsCore } from "./commands/executions/mod.ts";
-import { QuotesCore } from "./commands/quotes/mod.ts";
-import { SearchCore } from "./commands/search/mod.ts";
-import { TasksCore } from "./commands/tasks/mod.ts";
+import { DiscoverCore } from "./commands/discover/mod.ts";
+import { InspectCore } from "./commands/inspect/mod.ts";
+import { RunsCore } from "./commands/runs/mod.ts";
 
 export class CoreClient {
-  readonly tasks: TasksCore;
-  readonly quotes: QuotesCore;
-  readonly executions: ExecutionsCore;
-  readonly search: SearchCore;
+  readonly discover: DiscoverCore;
+  readonly inspect: InspectCore;
+  readonly runs: RunsCore;
 
   constructor(private readonly transport: CoreTransport) {
-    this.tasks = new TasksCore(transport);
-    this.quotes = new QuotesCore(transport);
-    this.executions = new ExecutionsCore(transport);
-    this.search = new SearchCore(transport);
+    this.discover = new DiscoverCore(transport);
+    this.inspect = new InspectCore(transport);
+    this.runs = new RunsCore(transport);
   }
 
   getTransport(): CoreTransport {

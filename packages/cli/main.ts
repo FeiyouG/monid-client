@@ -14,26 +14,26 @@ import { CompletionsCommand } from "@cliffy/command/completions";
 import { VERSION } from "@monid/core";
 import { keysCommand } from "./commands/keys/mod.ts";
 import { walletCommand } from "./commands/wallet/mod.ts";
-import { tasksCommand } from "./commands/tasks/mod.ts";
-import { quotesCommand } from "./commands/quotes/mod.ts";
-import { searchCommand } from "./commands/search/mod.ts";
+import { discoverCommand } from "./commands/discover/mod.ts";
+import { inspectCommand } from "./commands/inspect/mod.ts";
+import { runCommand } from "./commands/run/mod.ts";
+import { runsCommand } from "./commands/runs/mod.ts";
 import { x402Command } from "./commands/x402/mod.ts";
-import { executionsCommand } from "./commands/executions/mod.ts";
 
 await new Command()
   .name("monid")
   .version(VERSION)
-  .description("Monid CLI - Agentic payment platform for executing AI-powered searches")
+  .description("Monid CLI - Agentic payment platform for executing AI-powered data endpoints")
   
   // Register all commands
   // .command("auth", authCommand)
   .command("keys", keysCommand)
   .command("wallet", walletCommand)
-  .command("tasks", tasksCommand)
-  .command("quotes", quotesCommand)
-  .command("search", searchCommand)
+  .command("discover", discoverCommand)
+  .command("inspect", inspectCommand)
+  .command("run", runCommand)
+  .command("runs", runsCommand)
   .command("x402", x402Command)
-  .command("executions", executionsCommand)
   
   // Add shell completions command
   .command("completions", new CompletionsCommand())

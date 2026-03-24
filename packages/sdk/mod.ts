@@ -1,8 +1,8 @@
 export { Client } from "./client.ts";
 export type {
-  ClientExecutionsApi,
+  ClientDiscoverApi,
+  ClientInspectApi,
   ClientInterface,
   ClientOptions,
-  ClientQuotesApi,
-  ClientTasksApi,
+  ClientRunsApi,
 } from "./client.ts";
