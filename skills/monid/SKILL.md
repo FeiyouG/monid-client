@@ -19,13 +19,96 @@ Check if Monid is installed and up to date:
 monid --version
 ```
 
-The current version is **v0.0.3**. If `monid` is not found or the version is below 0.0.3, install or reinstall:
+The current version is **v0.0.4**. If `monid` is not found or the version is below 0.0.4, install or reinstall:
 
 ```bash
 curl -fsSL https://monid.ai/install.sh | bash
 ```
 
 This downloads the latest CLI to `~/.local/bin/monid`. Restart your terminal or run `source ~/.bashrc` (or `~/.zshrc`) if the command isn't found after installation.
+
+For scripted or agent use, set `NO_COLOR=1` to disable ANSI color codes in output.
+
+---
+
+## Standard Mode Workflow
+
+Prerequisites (one-time):
+
+1. Install CLI (see Setup above)
+2. Create account at https://app.monid.ai
+3. Generate API key at https://app.monid.ai/access/api-keys
+4. Add key to CLI — when helping a user, offer to set it up for them:
+   - Ask the user to paste their API key
+   - Run `monid keys add --label main --api-key <key>` with the provided key
+   - Or provide the command for them to run themselves:
+     `monid keys add --label main --api-key <key>`
+5. Verify: `monid keys list`
+
+Execution:
+
+```bash
+# 1. Discover
+monid discover -q "twitter posts"
+
+# 2. Inspect — read the inputSchema
+monid inspect -p apify -e /apidojo/tweet-scraper
+
+# 3. Run
+monid run -p apify -e /apidojo/tweet-scraper \
+  -i '{"searchTerms":["AI"],"maxItems":50}'
+# -> Run started: 01HXYZ...
+
+# 4. Poll periodically
+monid runs get --run-id 01HXYZ...
+# -> status: RUNNING
+
+# ... wait ~5-10s ...
+
+monid runs get --run-id 01HXYZ... -o tweets.json
+# -> status: COMPLETED, saved to tweets.json
+```
+
+---
+
+## x402 Mode Workflow
+
+Prerequisites (one-time):
+
+1. Install CLI (see Setup above)
+2. Add wallet: `monid wallet add --label main --private-key <0x...>`
+   The private key is needed because the CLI signs x402 payment transactions
+   and SIWX authentication requests locally on your machine — the key never
+   leaves your device.
+   Alternatively, if you prefer not to provide your private key to the CLI,
+   you can use any x402-compatible client or library to call Monid's x402
+   endpoints directly (`POST /x402/v1/run`). The CLI is recommended for
+   simplicity but not required.
+3. Fund wallet with USDC (payment) and ETH (gas) on Base Sepolia:
+   - USDC faucet: https://faucet.circle.com/ (select Base Sepolia)
+   - ETH faucet: https://www.alchemy.com/faucets/base-sepolia
+
+Execution:
+
+```bash
+# 1. Discover + Inspect (same as standard)
+monid discover -q "twitter posts"
+monid inspect -p apify -e /apidojo/tweet-scraper
+
+# 2. Run via x402 (always returns 202)
+monid x402 run -p apify -e /apidojo/tweet-scraper \
+  -i '{"searchTerms":["Bitcoin"],"maxItems":50}'
+# -> Run started: 01HABC...
+
+# 3. Poll with the same wallet that made the purchase
+monid x402 runs get --run-id 01HABC...
+# -> status: RUNNING
+
+# ... wait ~5-10s ...
+
+monid x402 runs get --run-id 01HABC... -o bitcoin.json
+# -> status: COMPLETED
+```
 
 ---
 
@@ -37,7 +120,7 @@ This downloads the latest CLI to `~/.local/bin/monid`. Restart your terminal or 
 monid discover -q <query> [-l <limit>]
 ```
 
-Searches available data endpoints using natural language. Returns a table of matching endpoints with provider, endpoint path, description, and price. The response also includes `query` (your search echoed back) and `count` (number of results returned).
+Searches available data endpoints using natural language. Returns a table of matching endpoints with provider slug (use this in `--provider`), endpoint path, description, and price. The response also includes `query` (your search echoed back) and `count` (number of results returned).
 
 Keep queries **short, concise, and right to the point** — the more specific and focused the query, the more accurate the results. Avoid long sentences; prefer noun phrases that describe the data source directly.
 
@@ -56,7 +139,7 @@ monid discover -q "linkedin job listings"
 monid inspect -p <provider> -e <endpoint>
 ```
 
-Returns the endpoint's description, summary, **inputSchema** (JSON schema of accepted parameters), price, documentation URL, and usage instructions for both standard and x402 modes.
+Returns the endpoint's description, **summary** (when available), **inputSchema** (JSON schema of accepted parameters, when available), price, documentation URL (when available), and CLI usage examples for both standard and x402 modes.
 
 **Always inspect before running.** The inputSchema tells you exactly what parameters the endpoint accepts. Never guess input parameters.
 
@@ -72,14 +155,14 @@ monid inspect -p apify -e /damilo/google-maps-scraper
 monid run -p <provider> -e <endpoint> -i <json|@file> [-w [timeout]] [-o <file>]
 ```
 
-Starts an async execution. The server returns a `runId` immediately.
+Starts an async execution. The server returns a `runId` immediately (HTTP 202). Poll with `monid runs get` for results.
 
 | Flag | Description |
 |------|-------------|
 | `-p, --provider` | Provider name (required) |
 | `-e, --endpoint` | Endpoint path (required) |
 | `-i, --input` | Input as inline JSON string or `@path/to/file.json` (required) |
-| `-w, --wait` | Optional. Long-polls until terminal status. **Prefer manual polling instead.** |
+| `-w, --wait [timeout]` | Long-polls until terminal status (optional timeout in seconds). **Not recommended for agents — use manual polling instead.** |
 | `-o, --output` | Save results to file when complete |
 
 ```bash
@@ -93,7 +176,7 @@ monid run -p apify -e /damilo/google-maps-scraper -i @params.json
 ### 4. Runs Get — check run status and retrieve results
 
 ```
-monid runs get -r <runId> [-w [timeout]] [-o <file>]
+monid runs get --run-id <runId> [-w [timeout]] [-o <file>]
 ```
 
 Returns the current status of a run. Without `--wait`, returns immediately. With `--wait`, long-polls until a terminal status.
@@ -102,13 +185,13 @@ Returns the current status of a run. Without `--wait`, returns immediately. With
 
 ```bash
 # Check current status
-monid runs get -r 01HXYZ...
+monid runs get --run-id 01HXYZ...
 
 # Retrieve and save completed results
-monid runs get -r 01HXYZ... -o results.json
+monid runs get --run-id 01HXYZ... -o results.json
 ```
 
-### 5. x402 Run — execute via anonymous wallet payment
+### 5. x402 Run — execute via wallet payment
 
 ```
 monid x402 run -p <provider> -e <endpoint> -i <json|@file>
@@ -123,14 +206,14 @@ monid x402 run -p apify -e /apidojo/tweet-scraper -i '{"searchTerms":["Bitcoin"]
 ### 6. x402 Runs Get — poll x402 run status
 
 ```
-monid x402 runs get -r <runId> [-w [timeout]] [-o <file>]
+monid x402 runs get --run-id <runId> [-w [timeout]] [-o <file>]
 ```
 
 Same as `monid runs get` but authenticated via SIWX (Sign-In with X). The **same wallet that made the purchase** must be the active wallet when polling — the wallet signs each request to prove ownership. No additional payment is needed for polling.
 
 ```bash
-monid x402 runs get -r 01HABC...
-monid x402 runs get -r 01HABC... -o results.json
+monid x402 runs get --run-id 01HABC...
+monid x402 runs get --run-id 01HABC... -o results.json
 ```
 
 ---
@@ -139,23 +222,53 @@ monid x402 runs get -r 01HABC... -o results.json
 
 | Status | Meaning |
 |--------|---------|
-| `READY` | Queued, waiting to start |
+| `READY` | Queued, waiting to start (most runs start directly as RUNNING) |
 | `RUNNING` | Actively executing |
 | `COMPLETED` | Finished successfully, results available |
 | `FAILED` | Execution failed |
 
 When a run fails, the response includes an error with `source` (platform, provider, or endpoint), `message`, and an optional `code` (e.g. `RATE_LIMITED`, `TIMEOUT`).
 
+### Output Format
+
+CLI output uses stable, parseable labels. Example for a running job:
+
+```
+Run ID:   01JXYZ...
+Status:   RUNNING
+Provider: apify
+Endpoint: /apidojo/tweet-scraper
+Price:    $0.003/call
+Created:  2026-03-28T10:30:00Z
+```
+
+When a run completes and `--output` is used:
+
+```
+Run ID:   01JXYZ...
+Status:   COMPLETED
+Provider: apify
+Endpoint: /apidojo/tweet-scraper
+Price:    $0.003/call
+Cost:     $0.003
+Created:  2026-03-28T10:30:00Z
+Started:  2026-03-28T10:30:01Z
+Done:     2026-03-28T10:30:15Z
+
+Results saved to tweets.json
+```
+
+The labels `Run ID:` and `Status:` are stable and safe to parse with grep/awk.
+
 ---
 
 ## Polling Best Practices
 
 - **Prefer manual polling over `--wait`**: call `runs get` (or `x402 runs get`) without `--wait`, check the status field, and poll again after some time.
-- Runs typically take **1 to 120 seconds** depending on the endpoint and data volume.
-- For agents: poll roughly every 15-30 seconds. Do not block the user conversation.
+- Runs typically take **1 to 120 seconds** depending on the endpoint and data volume, but most complete quickly.
+- For agents: poll roughly every 5-10 seconds. Do not block the user conversation.
 - `--wait` exists for simple interactive use, but agents should avoid it to stay non-blocking.
 - Always use `--output` to persist results once the run is COMPLETED.
-- The output labels `Run ID:` and `Status:` are stable and safe to parse with grep/awk.
 
 ---
 
@@ -171,7 +284,7 @@ cron or scheduler-based polling. **Never use `--wait` or `sleep` in agent code.*
 OUTPUT=$(monid run -p <provider> -e <endpoint> -i @params.json 2>&1)
 RUN_ID=$(echo "$OUTPUT" | grep "Run ID:" | awk '{print $NF}')
 
-# 2. Poll on a schedule (every 20s via cron or agent scheduler)
+# 2. Poll on a schedule (every 5-10s via cron or agent scheduler)
 monid runs get --run-id "$RUN_ID"
 #    → parse the "Status:" line
 #    → when COMPLETED: save output, remove the polling job
@@ -196,81 +309,11 @@ monid x402 runs get --run-id "$RUN_ID" -o results.json
 
 ### Key points
 
-- Poll every 15-30 seconds. Most runs complete within 120 seconds.
+- Poll every 5-10 seconds. Most runs complete within 120 seconds.
 - Parse the `Status:` line for `COMPLETED` or `FAILED`.
 - Always use `--output` to persist results to a file once complete.
 - The output labels `Run ID:` and `Status:` are stable and safe to parse.
 - Set `NO_COLOR=1` or pipe output to ensure clean text without ANSI escape codes.
-
----
-
-## Standard Mode Workflow
-
-Prerequisites (one-time):
-
-1. Install CLI (see Setup above)
-2. Create account at https://app.monid.ai
-3. Generate API key at https://app.monid.ai/access/api-keys
-4. Add key to CLI: `monid keys add --label main --api-key <key>`
-5. Verify: `monid keys list`
-
-Execution:
-
-```bash
-# 1. Discover
-monid discover -q "twitter posts"
-
-# 2. Inspect — read the inputSchema
-monid inspect -p apify -e /apidojo/tweet-scraper
-
-# 3. Run
-monid run -p apify -e /apidojo/tweet-scraper \
-  -i '{"searchTerms":["AI"],"maxItems":50}'
-# -> Run started: 01HXYZ...
-
-# 4. Poll periodically
-monid runs get -r 01HXYZ...
-# -> status: RUNNING
-
-# ... wait ~15s ...
-
-monid runs get -r 01HXYZ... -o tweets.json
-# -> status: COMPLETED, saved to tweets.json
-```
-
----
-
-## x402 Anonymous Mode Workflow
-
-Prerequisites (one-time):
-
-1. Install CLI (see Setup above)
-2. Add wallet: `monid wallet add --label main --private-key <0x...>`
-3. Fund wallet with USDC (payment) and ETH (gas) on Base Sepolia:
-   - USDC faucet: https://faucet.circle.com/ (select Base Sepolia)
-   - ETH faucet: https://www.alchemy.com/faucets/base-sepolia
-
-Execution:
-
-```bash
-# 1. Discover + Inspect (same as standard)
-monid discover -q "twitter posts"
-monid inspect -p apify -e /apidojo/tweet-scraper
-
-# 2. Run via x402 (always returns 202)
-monid x402 run -p apify -e /apidojo/tweet-scraper \
-  -i '{"searchTerms":["Bitcoin"],"maxItems":50}'
-# -> Run started: 01HABC...
-
-# 3. Poll with the same wallet that made the purchase
-monid x402 runs get -r 01HABC...
-# -> status: RUNNING
-
-# ... wait ~15s ...
-
-monid x402 runs get -r 01HABC... -o bitcoin.json
-# -> status: COMPLETED
-```
 
 ---
 
@@ -285,15 +328,15 @@ monid run -p apify -e /apidojo/tweet-scraper \
   -i '{"searchTerms":["AI agents"],"maxItems":50}'
 # -> runId: 01HXYZ...
 
-monid runs get -r 01HXYZ...
+monid runs get --run-id 01HXYZ...
 # status: RUNNING
 
-# ~15s later
-monid runs get -r 01HXYZ... -o tweets.json
+# ~5-10s later
+monid runs get --run-id 01HXYZ... -o tweets.json
 # status: COMPLETED
 ```
 
-### Flow 2: x402 anonymous — Instagram hashtag posts
+### Flow 2: x402 — Instagram hashtag posts
 
 ```bash
 monid wallet list   # verify wallet is active
@@ -304,11 +347,11 @@ monid x402 run -p apify -e /apify/instagram-hashtag-scraper \
   -i '{"hashtags":["travel"],"resultsLimit":30}'
 # -> runId: 01HABC...
 
-monid x402 runs get -r 01HABC...
+monid x402 runs get --run-id 01HABC...
 # status: RUNNING
 
-# ~15s later
-monid x402 runs get -r 01HABC... -o instagram.json
+# ~5-10s later
+monid x402 runs get --run-id 01HABC... -o instagram.json
 # status: COMPLETED
 ```
 
@@ -316,7 +359,7 @@ monid x402 runs get -r 01HABC... -o instagram.json
 
 User asks: "Compare AI discussion on Twitter vs LinkedIn"
 
-The agent should decompose this into unit data pieces:
+The agent should decompose this into unit data pieces. (The endpoint paths below are illustrative — always use `monid discover` to find the actual endpoints available.)
 
 1. Discover separately:
    ```bash
@@ -336,8 +379,8 @@ The agent should decompose this into unit data pieces:
    ```
 4. Poll each independently:
    ```bash
-   monid runs get -r 01H_TW... -o twitter_ai.json
-   monid runs get -r 01H_LI... -o linkedin_ai.json
+   monid runs get --run-id 01H_TW... -o twitter_ai.json
+   monid runs get --run-id 01H_LI... -o linkedin_ai.json
    ```
 5. Combine and analyze the results.
 
@@ -350,7 +393,7 @@ When input JSON is large or reusable, write it to a file first:
 monid run -p apify -e /damilo/google-maps-scraper -i @params.json
 # -> runId: 01HGEO...
 
-monid runs get -r 01HGEO... -o results.json
+monid runs get --run-id 01HGEO... -o results.json
 ```
 
 ---
@@ -361,9 +404,9 @@ monid runs get -r 01HGEO... -o results.json
 |---------|-------------|
 | `monid keys add --label <name> --api-key <key>` | Add and encrypt an API key |
 | `monid keys list` | Show configured keys |
-| `monid keys activate <label>` | Switch the active key |
-| `monid keys remove <label>` | Remove key locally (does not revoke on server) |
-| `monid keys rename <old> <new>` | Rename a key label |
+| `monid keys activate --label <label>` | Switch the active key (also accepts `--fingerprint <fp>`) |
+| `monid keys remove --label <label>` | Remove key locally (does not revoke on server) |
+| `monid keys rename --old-label <old> --new-label <new>` | Rename a key label (also accepts `--old-fingerprint`) |
 
 API key format: `monid_<stage>_<key>` (e.g. `monid_live_abc123...`).
 
@@ -388,8 +431,11 @@ Testnet faucets (Base Sepolia):
 
 ## Troubleshooting
 
-**"Invalid API key" / "Unauthorized"**
-Check that the key is still active at https://app.monid.ai/access/api-keys. If revoked or expired, generate a new one and add it with `monid keys add`.
+**"No API key configured"**
+No key has been added to the CLI yet. Follow the Standard Mode Workflow prerequisites to set one up.
+
+**"Unauthorized" / 401 error**
+The API key is invalid or expired. Check with `monid keys list`. If the key is missing or expired, generate a new one at https://app.monid.ai/access/api-keys and add it: `monid keys add --label main --api-key <key>`.
 
 **"No wallets configured" / "No wallet activated"**
 Add and activate a wallet: `monid wallet add --label main --private-key <0x...>`. The first wallet added is auto-activated.
@@ -398,7 +444,7 @@ Add and activate a wallet: `monid wallet add --label main --private-key <0x...>`
 Insufficient USDC balance in the wallet. Check balance on a block explorer and fund from the faucets listed above.
 
 **Run status FAILED**
-Check the error details with `monid runs get -r <id>`. Common causes: invalid input parameters (re-inspect the endpoint), platform rate limits (retry later), or request scope too large (reduce item count).
+Check the error details with `monid runs get --run-id <id>`. Common causes: invalid input parameters (re-inspect the endpoint), platform rate limits (retry later), or request scope too large (reduce item count).
 
 **Run taking a long time**
 Normal — runs take 1 to 120 seconds depending on complexity and data volume. Keep polling periodically.
@@ -409,7 +455,7 @@ Normal — runs take 1 to 120 seconds depending on complexity and data volume. K
 
 1. **Always inspect before running** — never guess input parameters. The inputSchema from `monid inspect` is the source of truth.
 2. **Keep discover queries short and focused** — noun phrases work best. Break complex requests into smaller unit pieces.
-3. **Don't block on `--wait`** — poll manually with `runs get` every 15-30 seconds instead.
+3. **Never use `--wait`** — always poll manually with `runs get` every 5-10 seconds. The `--wait` flag blocks the process and is not recommended for agent use.
 4. **Don't mix run and x402 polling** — use `monid runs get` for standard runs, `monid x402 runs get` for x402 runs (requires SIWX with the purchasing wallet).
 5. **Always use `--output`** to save results to a file.
 6. **Run multiple endpoints in parallel** when a request spans multiple data sources — discover and run each independently, then combine results.
