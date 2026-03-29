@@ -37,7 +37,7 @@ This downloads the latest CLI to `~/.local/bin/monid`. Restart your terminal or 
 monid discover -q <query> [-l <limit>]
 ```
 
-Searches available data endpoints using natural language. Returns a table of matching endpoints with provider, endpoint path, description, and price.
+Searches available data endpoints using natural language. Returns a table of matching endpoints with provider, endpoint path, description, and price. The response also includes `query` (your search echoed back) and `count` (number of results returned).
 
 Keep queries **short, concise, and right to the point** — the more specific and focused the query, the more accurate the results. Avoid long sentences; prefer noun phrases that describe the data source directly.
 

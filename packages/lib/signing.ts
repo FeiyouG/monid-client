@@ -50,6 +50,10 @@ export async function signRequest(
     throw new Error(`Active key '${config.activated_key}' not found in config`);
   }
   
+  if (activeKey.type !== "verification") {
+    throw new Error(`Active key '${config.activated_key}' is not a verification key. Only verification keys can be used for request signing.`);
+  }
+  
   // Load private key
   const workspaceId = config.workspace.id;
   const keysDir = await getKeysDir(workspaceId);

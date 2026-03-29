@@ -4,12 +4,10 @@
 
 import { CONFIG } from "@monid/core";
 import { loadConfig } from "./config.ts";
-import { getAccessToken } from "./credentials.ts";
 import { signRequest } from "./signing.ts";
 import { decryptData, generateSystemPassword } from "./crypto.ts";
 
 interface ApiRequestOptions {
-  useOAuth?: boolean;  // Force OAuth instead of signature auth
   headers?: Record<string, string>;  // Additional headers
 }
 
@@ -36,7 +34,7 @@ async function getDecryptedApiKey(label: string): Promise<string> {
 
 /**
  * Make an authenticated API request
- * Tries signature-based auth first, falls back to OAuth if signature fails
+ * Uses API key (Bearer) or verification key (Ed25519 signature) authentication
  */
 export async function makeAuthenticatedRequest<T>(
   method: string,
@@ -46,17 +44,19 @@ export async function makeAuthenticatedRequest<T>(
 ): Promise<T> {
   const config = await loadConfig();
   
-  // Find the activated key to determine its type
-  const activatedKey = config?.activated_key 
-    ? config.keys.find(k => k.label === config.activated_key)
-    : undefined;
+  if (!config || !config.activated_key) {
+    throw new Error("No API key configured. Add one with 'monid keys add --api-key <key> --label <name>'.");
+  }
 
-  // API keys don't require workspace or auth
-  // Only verification keys need these checks
-  if (activatedKey?.type === "verification") {
-    if (!config || !config.workspace) {
-      throw new Error("No workspace configured. Add an API key with 'monid keys add'.");
-    }
+  // Find the activated key to determine its type
+  const activatedKey = config.keys.find(k => k.label === config.activated_key);
+  if (!activatedKey) {
+    throw new Error(`Active key '${config.activated_key}' not found in config. Check with 'monid keys list'.`);
+  }
+
+  // Verification keys require a workspace
+  if (activatedKey.type === "verification" && !config.workspace) {
+    throw new Error("No workspace configured. Verification keys require a workspace.");
   }
 
   const url = `${CONFIG.api.endpoint}${path}`;
@@ -68,40 +68,21 @@ export async function makeAuthenticatedRequest<T>(
   };
 
   // Check activated key type
-  if (activatedKey?.type === "api" && config.activated_key) {
+  if (activatedKey.type === "api") {
     // Use API key authentication
     const apiKey = await getDecryptedApiKey(config.activated_key);
     headers["Authorization"] = `Bearer ${apiKey}`;
     
-  } else if (activatedKey?.type === "verification" && config.activated_key && !options.useOAuth) {
-    // Try signature-based auth
-    try {
-      const bodyString = body ? JSON.stringify(body) : undefined;
-      const signatureHeaders = await signRequest(method, path, bodyString);
-      
-      // Add signature headers
-      headers = {
-        ...headers,
-        ...signatureHeaders,
-      };
-    } catch (error) {
-      // Signature auth failed, try OAuth fallback
-      console.warn(`Signature auth failed: ${error instanceof Error ? error.message : String(error)}`);
-      console.warn("Falling back to OAuth authentication...");
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error("Authentication failed. Check your active key with 'monid keys list'.");
-      }
-      headers["Authorization"] = `Bearer ${accessToken}`;
-    }
+  } else if (activatedKey.type === "verification") {
+    // Use signature-based auth
+    const bodyString = body ? JSON.stringify(body) : undefined;
+    const signatureHeaders = await signRequest(method, path, bodyString);
     
-  } else {
-    // No activated key - use OAuth only
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      throw new Error("No API key configured. Add one with 'monid keys add --api-key <key> --label <name>'.");
-    }
-    headers["Authorization"] = `Bearer ${accessToken}`;
+    // Add signature headers
+    headers = {
+      ...headers,
+      ...signatureHeaders,
+    };
   }
 
   // Make request

@@ -13,24 +13,12 @@
  *   
  * Required Environment Variables:
  *   - VERSION
- *   - OAUTH_DOMAIN
- *   - OAUTH_CLIENT_ID
- *   - OAUTH_TYPE
- *   - OAUTH_REDIRECT_URI
- *   - OAUTH_SCOPES
  *   - API_ENDPOINT
- *   - DASHBOARD_URL
  */
 
 const REQUIRED_VARS = [
   "VERSION",
-  "OAUTH_DOMAIN",
-  "OAUTH_CLIENT_ID",
-  "OAUTH_TYPE",
-  "OAUTH_REDIRECT_URI",
-  "OAUTH_SCOPES",
   "API_ENDPOINT",
-  "DASHBOARD_URL",
 ];
 
 // Read and validate environment variables
@@ -55,20 +43,10 @@ if (missingVars.length > 0) {
   console.error("\nExample .env file:");
   console.error(`
 VERSION=0.1.0
-OAUTH_DOMAIN=your-app.clerk.accounts.dev
-OAUTH_CLIENT_ID=your_client_id
-OAUTH_TYPE=clerk
-OAUTH_REDIRECT_URI=http://localhost:8918/callback
-OAUTH_SCOPES=profile email openid
 API_ENDPOINT=http://localhost:8080
-DASHBOARD_URL=http://localhost:3000
   `);
   Deno.exit(1);
 }
-
-// Parse scopes
-const scopesArray = config.OAUTH_SCOPES.split(" ").map(s => s.trim()).filter(Boolean);
-const scopesFormatted = JSON.stringify(scopesArray, null, 4).replace(/\n/g, "\n    ");
 
 // Generate the TypeScript configuration file
 const buildTimestamp = new Date().toISOString();
@@ -87,16 +65,8 @@ const configFileContent = `import type { AppConfig } from "./types.ts";
 export const VERSION = "${config.VERSION}";
 
 export const CONFIG: AppConfig = {
-  oauth: {
-    domain: "${config.OAUTH_DOMAIN}",
-    clientId: "${config.OAUTH_CLIENT_ID}",
-    type: "${config.OAUTH_TYPE}" as const,
-    redirectUri: "${config.OAUTH_REDIRECT_URI}",
-    scopes: ${scopesFormatted},
-  },
   api: {
     endpoint: "${config.API_ENDPOINT}",
-    dashboardUrl: "${config.DASHBOARD_URL}",
   },
 } as const;
 `;
@@ -108,9 +78,6 @@ await Deno.writeTextFile(outputPath, configFileContent);
 console.log("✓ Generated build configuration:");
 console.log(`  Output: ${outputPath}`);
 console.log(`  Version: ${config.VERSION}`);
-console.log(`  OAuth Domain: ${config.OAUTH_DOMAIN}`);
-console.log(`  OAuth Client ID: ${config.OAUTH_CLIENT_ID}`);
 console.log(`  API Endpoint: ${config.API_ENDPOINT}`);
-console.log(`  Dashboard URL: ${config.DASHBOARD_URL}`);
 console.log(`  Build Timestamp: ${buildTimestamp}`);
 console.log("\n✓ Config is ready for compilation");

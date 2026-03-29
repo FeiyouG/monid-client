@@ -5,7 +5,7 @@
 import { Command } from "@cliffy/command";
 import { getCliCoreClient } from "../../core-client.ts";
 import { parseInput } from "../../shared/input-parser.ts";
-import { formatPrice } from "../../../types/api.ts";
+import { formatCost } from "../../../types/api.ts";
 import type { RunResponse } from "../../../types/api.ts";
 import {
   error,
@@ -64,7 +64,7 @@ export const runCommand = new Command()
         console.log("");
         success(`Run started: ${run.runId}`);
         console.log(`  ${LABELS.STATUS}  ${statusBadge(run.status)}`);
-        console.log(`  ${LABELS.PRICE}   ${formatPrice(run.price)}`);
+        console.log(`  ${LABELS.COST}    ${run.cost ? formatCost(run.cost) : "pending"}`);
         console.log("");
 
         // If --wait, long-poll until terminal status
@@ -125,7 +125,7 @@ export function displayRunResult(
 ): void {
   console.log(`  ${LABELS.RUN_ID}   ${run.runId}`);
   console.log(`  ${LABELS.STATUS}   ${statusBadge(run.status)}`);
-  console.log(`  ${LABELS.PRICE}    ${formatPrice(run.price)}`);
+  console.log(`  ${LABELS.COST}     ${run.cost ? formatCost(run.cost) : "pending"}`);
   if (run.createdAt) {
     console.log(`  ${LABELS.CREATED}  ${new Date(run.createdAt).toLocaleString()}`);
   }

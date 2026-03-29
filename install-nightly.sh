@@ -205,8 +205,7 @@ print_next_steps() {
     fi
     
     echo "Get started with nightly build:"
-    echo "  ${BINARY_NAME} auth login"
-    echo "  ${BINARY_NAME} keys generate --label my-key"
+    echo "  ${BINARY_NAME} keys add --api-key <key> --label my-key"
     echo "  ${BINARY_NAME} --help"
     echo ""
     

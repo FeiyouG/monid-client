@@ -28,6 +28,7 @@ export const LABELS = {
   RUN_ID:  "Run ID:",
   STATUS:  "Status:",
   PRICE:   "Price:",
+  COST:    "Cost:",
   CREATED: "Created:",
   STARTED: "Started:",
   DONE:    "Done:",
@@ -43,10 +44,6 @@ export function error(message: string): void {
 
 export function info(message: string): void {
   console.log(`→ ${message}`);
-}
-
-export function warning(message: string): void {
-  console.warn(`⚠ ${message}`);
 }
 
 /**

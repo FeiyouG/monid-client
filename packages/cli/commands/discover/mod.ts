@@ -43,7 +43,7 @@ export const discoverCommand = new Command()
         .header(["Provider", "Endpoint", "Description", "Price"])
         .body(
           response.results.map((r) => [
-            r.provider,
+            r.providerName ? `${r.providerName} (${r.provider})` : r.provider,
             r.endpoint,
             r.description.length > 60
               ? r.description.slice(0, 57) + "..."

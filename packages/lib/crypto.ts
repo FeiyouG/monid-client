@@ -1,65 +1,7 @@
 /**
  * Cryptographic operations
- * Ed25519 key generation and management
+ * Ed25519 key import/signing and AES-GCM encryption
  */
-
-interface KeyPair {
-  publicKey: CryptoKey;
-  privateKey: CryptoKey;
-}
-
-interface ExportedKeyPair {
-  publicKeyPEM: string;
-  privateKeyPEM: string;
-  publicKeyRaw: Uint8Array;
-}
-
-// Generate Ed25519 key pair
-export async function generateEd25519KeyPair(): Promise<KeyPair> {
-  const keyPair = await crypto.subtle.generateKey(
-    {
-      name: "Ed25519",
-    },
-    true, // extractable
-    ["sign", "verify"]
-  ) as CryptoKeyPair;
-  
-  return {
-    publicKey: keyPair.publicKey,
-    privateKey: keyPair.privateKey,
-  };
-}
-
-// Export key pair to PEM format
-export async function exportKeyPair(keyPair: KeyPair): Promise<ExportedKeyPair> {
-  // Export private key as PKCS#8
-  const privateKeyBuffer = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
-  const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyBuffer)));
-  const privateKeyPEM = formatPEM(privateKeyBase64, "PRIVATE KEY");
-  
-  // Export public key as SPKI
-  const publicKeyBuffer = await crypto.subtle.exportKey("spki", keyPair.publicKey);
-  const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(publicKeyBuffer)));
-  const publicKeyPEM = formatPEM(publicKeyBase64, "PUBLIC KEY");
-  
-  // Also get raw public key for fingerprint
-  const publicKeyRaw = await crypto.subtle.exportKey("raw", keyPair.publicKey);
-  
-  return {
-    publicKeyPEM,
-    privateKeyPEM,
-    publicKeyRaw: new Uint8Array(publicKeyRaw),
-  };
-}
-
-// Format base64 as PEM
-function formatPEM(base64: string, label: string): string {
-  const lines: string[] = [];
-  for (let i = 0; i < base64.length; i += 64) {
-    lines.push(base64.substring(i, i + 64));
-  }
-  return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----`;
-}
 
 // Import private key from PEM
 export async function importPrivateKey(pem: string): Promise<CryptoKey> {
@@ -95,7 +37,7 @@ export async function sign(privateKey: CryptoKey, data: Uint8Array): Promise<Uin
       name: "Ed25519",
     },
     privateKey,
-    data
+    data as BufferSource,
   );
   
   return new Uint8Array(signature);

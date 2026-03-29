@@ -12,7 +12,6 @@ import { getShortFingerprint } from "../utils/fingerprint.ts";
 const HOME_DIR = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
 const CONFIG_DIR = join(HOME_DIR, ".monid");
 const CONFIG_FILE = join(CONFIG_DIR, "config.yaml");
-const CREDENTIALS_FILE = join(CONFIG_DIR, "credentials");
 const KEYS_DIR = join(CONFIG_DIR, "keys");
 const WALLETS_DIR = join(CONFIG_DIR, "wallets");
 
@@ -37,7 +36,7 @@ export async function loadConfig(): Promise<Config | null> {
     if (config?.keys) {
       let needsSave = false;
       for (const key of config.keys) {
-        if ('fingerprint' in key && !key.fingerprint_short) {
+        if (key.type === "verification" && !key.fingerprint_short) {
           key.fingerprint_short = getShortFingerprint(key.fingerprint);
           needsSave = true;
         }
@@ -70,11 +69,6 @@ export async function saveConfig(config: Config): Promise<void> {
   }
 }
 
-export async function getCredentialsPath(): Promise<string> {
-  await ensureConfigDir();
-  return CREDENTIALS_FILE;
-}
-
 export async function getKeysDir(workspaceId?: string): Promise<string> {
   await ensureConfigDir();
   if (workspaceId) {
@@ -88,29 +82,6 @@ export async function getKeysDir(workspaceId?: string): Promise<string> {
 export async function getWalletsDir(): Promise<string> {
   await ensureConfigDir();
   return WALLETS_DIR;
-}
-
-export async function deleteConfig(): Promise<void> {
-  try {
-    if (await exists(CONFIG_FILE)) {
-      await Deno.remove(CONFIG_FILE);
-    }
-    if (await exists(CREDENTIALS_FILE)) {
-      await Deno.remove(CREDENTIALS_FILE);
-    }
-  } catch (error) {
-    throw new Error(`Failed to delete config: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-export async function deleteCredentials(): Promise<void> {
-  try {
-    if (await exists(CREDENTIALS_FILE)) {
-      await Deno.remove(CREDENTIALS_FILE);
-    }
-  } catch (error) {
-    throw new Error(`Failed to delete credentials: ${error instanceof Error ? error.message : String(error)}`);
-  }
 }
 
 export function createDefaultConfig(): Config {

@@ -52,30 +52,6 @@ export interface AuthInfo {
   user_id?: string;
 }
 
-export interface OAuthTokenResponse {
-  access_token: string;
-  refresh_token?: string;
-  id_token?: string;
-  token_type: string;
-  expires_in: number;
-}
-
-export interface WorkspaceSummary {
-  workspaceId: string;
-  slug: string;
-}
-
-export interface WorkspacesResponse {
-  workspaces: WorkspaceSummary[];
-}
-
-export interface UserInfo {
-  sub: string;  // User ID
-  email: string;
-  email_verified?: boolean;
-  name?: string;
-}
-
 // Re-export all types
 export * from "./api.ts";
 export * from "./verification-key.ts";

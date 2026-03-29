@@ -8,7 +8,7 @@
 import { Command } from "@cliffy/command";
 import { CONFIG } from "@monid/core";
 import { parseInput } from "../../../shared/input-parser.ts";
-import { formatPrice } from "../../../../types/api.ts";
+import { formatCost } from "../../../../types/api.ts";
 import type { RunResponse } from "../../../../types/api.ts";
 import {
   createX402Fetch,
@@ -148,7 +148,7 @@ export const x402RunCommand = new Command()
         console.log("");
         success(`Run started: ${result.runId}`);
         console.log(`  ${LABELS.STATUS}  ${statusBadge(result.status)}`);
-        console.log(`  ${LABELS.PRICE}   ${formatPrice(result.price)}`);
+        console.log(`  ${LABELS.COST}    ${result.cost ? formatCost(result.cost) : "pending"}`);
         if (result.message) {
           console.log(`  Info:   ${result.message}`);
         }

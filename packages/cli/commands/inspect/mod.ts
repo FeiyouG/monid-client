@@ -34,31 +34,40 @@ export const inspectCommand = new Command()
       );
 
       console.log("");
-      success(`${result.provider}${result.endpoint}`);
+      success(`${result.providerName} (${result.provider}) ${result.endpoint}`);
       console.log("");
 
       console.log(`  Description:  ${result.description}`);
       console.log(`  Price:        ${formatPrice(result.price)}`);
-      console.log(`  Docs:         ${result.docUrl}`);
-      console.log("");
-
-      console.log("  Summary:");
-      // Indent each line of the summary
-      for (const line of result.summary.split("\n")) {
-        console.log(`    ${line}`);
+      if (result.docUrl) {
+        console.log(`  Docs:         ${result.docUrl}`);
       }
       console.log("");
 
-      console.log("  Input Schema:");
-      const schemaLines = prettyJson(result.inputSchema).split("\n");
-      for (const line of schemaLines) {
-        console.log(`    ${line}`);
+      if (result.summary) {
+        console.log("  Summary:");
+        for (const line of result.summary.split("\n")) {
+          console.log(`    ${line}`);
+        }
+      } else {
+        console.log("  Summary:      No summary available.");
+      }
+      console.log("");
+
+      if (result.inputSchema) {
+        console.log("  Input Schema:");
+        const schemaLines = prettyJson(result.inputSchema).split("\n");
+        for (const line of schemaLines) {
+          console.log(`    ${line}`);
+        }
+      } else {
+        console.log("  Input Schema: No input schema available.");
       }
       console.log("");
 
       console.log("  Usage:");
-      console.log(`    API:  ${result.usage.api}`);
-      console.log(`    x402: ${result.usage.x402}`);
+      console.log(`    CLI:       ${result.usage.cli}`);
+      console.log(`    CLI x402:  ${result.usage.cliX402}`);
       console.log("");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
