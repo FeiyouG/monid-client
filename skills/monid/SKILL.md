@@ -155,6 +155,52 @@ When a run fails, the response includes an error with `source` (platform, provid
 - For agents: poll roughly every 15-30 seconds. Do not block the user conversation.
 - `--wait` exists for simple interactive use, but agents should avoid it to stay non-blocking.
 - Always use `--output` to persist results once the run is COMPLETED.
+- The output labels `Run ID:` and `Status:` are stable and safe to parse with grep/awk.
+
+---
+
+## Agent Polling Pattern (Cron)
+
+For AI agent runtimes that cannot block, use the fire-and-poll pattern with
+cron or scheduler-based polling. **Never use `--wait` or `sleep` in agent code.**
+
+### Standard mode
+
+```bash
+# 1. Fire — capture the run ID
+OUTPUT=$(monid run -p <provider> -e <endpoint> -i @params.json 2>&1)
+RUN_ID=$(echo "$OUTPUT" | grep "Run ID:" | awk '{print $NF}')
+
+# 2. Poll on a schedule (every 20s via cron or agent scheduler)
+monid runs get --run-id "$RUN_ID"
+#    → parse the "Status:" line
+#    → when COMPLETED: save output, remove the polling job
+
+# 3. Save results once complete
+monid runs get --run-id "$RUN_ID" -o results.json
+```
+
+### x402 mode
+
+```bash
+# 1. Fire (always returns 202)
+OUTPUT=$(monid x402 run -p <provider> -e <endpoint> -i @params.json 2>&1)
+RUN_ID=$(echo "$OUTPUT" | grep "Run ID:" | awk '{print $NF}')
+
+# 2. Poll (same wallet must be active)
+monid x402 runs get --run-id "$RUN_ID"
+
+# 3. Save when complete
+monid x402 runs get --run-id "$RUN_ID" -o results.json
+```
+
+### Key points
+
+- Poll every 15-30 seconds. Most runs complete within 120 seconds.
+- Parse the `Status:` line for `COMPLETED` or `FAILED`.
+- Always use `--output` to persist results to a file once complete.
+- The output labels `Run ID:` and `Status:` are stable and safe to parse.
+- Set `NO_COLOR=1` or pipe output to ensure clean text without ANSI escape codes.
 
 ---
 
@@ -367,3 +413,4 @@ Normal — runs take 1 to 120 seconds depending on complexity and data volume. K
 4. **Don't mix run and x402 polling** — use `monid runs get` for standard runs, `monid x402 runs get` for x402 runs (requires SIWX with the purchasing wallet).
 5. **Always use `--output`** to save results to a file.
 6. **Run multiple endpoints in parallel** when a request spans multiple data sources — discover and run each independently, then combine results.
+7. **Use cron/scheduler for polling** — fire `monid run`, capture the Run ID from stdout, then poll `monid runs get` on a timer. Never use `--wait`, `sleep`, or any blocking pattern in agent code.

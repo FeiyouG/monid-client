@@ -55,7 +55,7 @@ export async function makeAuthenticatedRequest<T>(
   // Only verification keys need these checks
   if (activatedKey?.type === "verification") {
     if (!config || !config.workspace) {
-      throw new Error("Not authenticated. Run 'monid auth login' first.");
+      throw new Error("No workspace configured. Add an API key with 'monid keys add'.");
     }
   }
 
@@ -90,7 +90,7 @@ export async function makeAuthenticatedRequest<T>(
       console.warn("Falling back to OAuth authentication...");
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        throw new Error("Authentication required.");
+        throw new Error("Authentication failed. Check your active key with 'monid keys list'.");
       }
       headers["Authorization"] = `Bearer ${accessToken}`;
     }
@@ -99,7 +99,7 @@ export async function makeAuthenticatedRequest<T>(
     // No activated key - use OAuth only
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      throw new Error("Authentication required. Run 'monid auth login' first.");
+      throw new Error("No API key configured. Add one with 'monid keys add --api-key <key> --label <name>'.");
     }
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
@@ -155,7 +155,7 @@ async function handleApiError(response: Response): Promise<never> {
 
   // Special handling for common errors
   if (response.status === 401) {
-    throw new Error(`${fullMessage}\n\nAuthentication expired. Run 'monid auth login' to re-authenticate.`);
+    throw new Error(`${fullMessage}\n\nYour API key may be invalid or expired. Check with 'monid keys list' or add a new key with 'monid keys add'.`);
   }
 
   if (response.status === 403) {

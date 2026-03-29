@@ -63,7 +63,7 @@ export const renameCommand = new Command()
       // Handle file rename for verification keys only
       if (targetKey.type === "verification") {
         if (!config.workspace) {
-          error("Not authenticated. Run 'monid auth login' first.");
+          error("No workspace configured. Add an API key with 'monid keys add'.");
           Deno.exit(1);
         }
         

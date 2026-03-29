@@ -22,8 +22,7 @@ export const listCommand = new Command()
       }
 
       if (!config.keys || config.keys.length === 0) {
-        console.log("No keys found. Generate a verification key or add an API key:");
-        console.log("  monid keys generate --label <name>");
+        console.log("No keys found. Add an API key:");
         console.log("  monid keys add --api-key <key> --label <name>");
         return;
       }

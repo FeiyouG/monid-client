@@ -37,11 +37,11 @@ export async function signRequest(
   // Load config
   const config = await loadConfig();
   if (!config || !config.workspace) {
-    throw new Error("Not authenticated. Run 'monid auth login' first.");
+    throw new Error("No workspace configured. Add an API key with 'monid keys add'.");
   }
   
   if (!config.activated_key) {
-    throw new Error("No active key. Generate one with 'monid keys generate --label <name>'");
+    throw new Error("No active key. Add one with 'monid keys add --api-key <key> --label <name>'");
   }
   
   // Find activated key

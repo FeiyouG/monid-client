@@ -2,6 +2,37 @@
  * Pretty CLI output utilities
  */
 
+/**
+ * Determine whether to emit ANSI color codes.
+ * Colors are disabled when:
+ *   - The NO_COLOR env var is set (https://no-color.org)
+ *   - stdout is not a TTY (i.e. output is piped)
+ */
+function shouldColor(): boolean {
+  if (Deno.env.get("NO_COLOR") !== undefined) return false;
+  try {
+    return Deno.stdout.isTerminal();
+  } catch {
+    return false;
+  }
+}
+
+/** Evaluated once at module load — no per-call overhead. */
+const USE_COLOR = shouldColor();
+
+/**
+ * Stable output labels — agents parse these with grep/awk.
+ * Do not rename without a major version bump.
+ */
+export const LABELS = {
+  RUN_ID:  "Run ID:",
+  STATUS:  "Status:",
+  PRICE:   "Price:",
+  CREATED: "Created:",
+  STARTED: "Started:",
+  DONE:    "Done:",
+} as const;
+
 export function success(message: string): void {
   console.log(`✓ ${message}`);
 }
@@ -19,11 +50,14 @@ export function warning(message: string): void {
 }
 
 /**
- * Format JSON with colors for terminal display
+ * Format JSON with optional syntax highlighting for terminal display.
+ * When output is piped or NO_COLOR is set, returns plain JSON.
  */
 export function prettyJson(obj: unknown, indent: number = 2): string {
   const json = JSON.stringify(obj, null, indent);
-  
+
+  if (!USE_COLOR) return json;
+
   // ANSI color codes
   const colors = {
     reset: "\x1b[0m",
@@ -44,9 +78,20 @@ export function prettyJson(obj: unknown, indent: number = 2): string {
 }
 
 /**
- * Create a progress spinner
+ * Create a progress spinner.
+ * When output is piped, prints the message once and returns no-op controls
+ * (animated \r overwrites are meaningless in non-TTY contexts).
  */
 export function progressSpinner(message: string): { stop: () => void; update: (msg: string) => void } {
+  if (!USE_COLOR) {
+    // Non-TTY: single static line, no animation
+    console.log(`… ${message}`);
+    return {
+      stop: () => {},
+      update: () => {},
+    };
+  }
+
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   let frameIndex = 0;
   let currentMessage = message;
@@ -77,9 +122,12 @@ export function progressSpinner(message: string): { stop: () => void; update: (m
 }
 
 /**
- * Create a status badge with color
+ * Create a status badge with color.
+ * Returns plain text when output is piped or NO_COLOR is set.
  */
 export function statusBadge(status: string): string {
+  if (!USE_COLOR) return status;
+
   const colors = {
     READY: "\x1b[34m",      // blue
     RUNNING: "\x1b[33m",    // yellow

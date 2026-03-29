@@ -32,7 +32,7 @@ export const removeCommand = new Command()
       // Validate this is an API key
       if (key.type !== "api") {
         error(`Cannot remove Agent Key '${label}'`);
-        info("Agent keys must be deleted using 'monid keys delete --label <name>'");
+        info("Agent keys cannot be removed locally. Contact your workspace admin to revoke them.");
         Deno.exit(1);
       }
 

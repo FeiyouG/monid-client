@@ -10,6 +10,7 @@ import type { RunResponse } from "../../../types/api.ts";
 import {
   error,
   info,
+  LABELS,
   prettyJson,
   progressSpinner,
   statusBadge,
@@ -62,8 +63,8 @@ export const runCommand = new Command()
 
         console.log("");
         success(`Run started: ${run.runId}`);
-        console.log(`  Status: ${statusBadge(run.status)}`);
-        console.log(`  Price:  ${formatPrice(run.price)}`);
+        console.log(`  ${LABELS.STATUS}  ${statusBadge(run.status)}`);
+        console.log(`  ${LABELS.PRICE}   ${formatPrice(run.price)}`);
         console.log("");
 
         // If --wait, long-poll until terminal status
@@ -122,18 +123,18 @@ export function displayRunResult(
   run: RunResponse,
   outputFile?: string,
 ): void {
-  console.log(`  Run ID:  ${run.runId}`);
-  console.log(`  Status:  ${statusBadge(run.status)}`);
-  console.log(`  Price:   ${formatPrice(run.price)}`);
+  console.log(`  ${LABELS.RUN_ID}   ${run.runId}`);
+  console.log(`  ${LABELS.STATUS}   ${statusBadge(run.status)}`);
+  console.log(`  ${LABELS.PRICE}    ${formatPrice(run.price)}`);
   if (run.createdAt) {
-    console.log(`  Created: ${new Date(run.createdAt).toLocaleString()}`);
+    console.log(`  ${LABELS.CREATED}  ${new Date(run.createdAt).toLocaleString()}`);
   }
   if (run.startedAt) {
-    console.log(`  Started: ${new Date(run.startedAt).toLocaleString()}`);
+    console.log(`  ${LABELS.STARTED}  ${new Date(run.startedAt).toLocaleString()}`);
   }
   if (run.completedAt) {
     console.log(
-      `  Done:    ${new Date(run.completedAt).toLocaleString()}`,
+      `  ${LABELS.DONE}     ${new Date(run.completedAt).toLocaleString()}`,
     );
   }
   console.log("");

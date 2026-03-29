@@ -59,7 +59,7 @@ export const activateCommand = new Command()
         if (targetKey.status === "REVOKED") {
           error(`Cannot activate revoked key '${targetKey.label}'`);
           info("This key has been revoked on the server");
-          info("Generate a new key with 'monid keys generate --label <name>'");
+          info("Add a new key with 'monid keys add --api-key <key> --label <name>'");
           Deno.exit(1);
         }
         
@@ -69,7 +69,7 @@ export const activateCommand = new Command()
           if (expiryDate < new Date()) {
             error(`Cannot activate expired key '${targetKey.label}'`);
             info(`This key expired on ${expiryDate.toLocaleString()}`);
-            info("Generate a new key with 'monid keys generate --label <name>'");
+            info("Add a new key with 'monid keys add --api-key <key> --label <name>'");
             Deno.exit(1);
           }
         }

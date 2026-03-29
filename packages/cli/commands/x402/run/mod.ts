@@ -17,6 +17,7 @@ import {
 import {
   error,
   info,
+  LABELS,
   progressSpinner,
   statusBadge,
   success,
@@ -146,8 +147,8 @@ export const x402RunCommand = new Command()
 
         console.log("");
         success(`Run started: ${result.runId}`);
-        console.log(`  Status: ${statusBadge(result.status)}`);
-        console.log(`  Price:  ${formatPrice(result.price)}`);
+        console.log(`  ${LABELS.STATUS}  ${statusBadge(result.status)}`);
+        console.log(`  ${LABELS.PRICE}   ${formatPrice(result.price)}`);
         if (result.message) {
           console.log(`  Info:   ${result.message}`);
         }

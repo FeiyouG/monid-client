@@ -6,11 +6,29 @@
 // Shared
 // ---------------------------------------------------------------------------
 
-export interface Price {
+/** Price from discover/inspect: PER_CALL */
+export interface PerCallPrice {
   type: "PER_CALL";
-  currency: "USD";
-  value: number;
+  amount: number;
+  currency: string;
 }
+
+/** Price from discover/inspect: PER_RESULT */
+export interface PerResultPrice {
+  type: "PER_RESULT";
+  amount: number;
+  currency: string;
+  flatFee?: number;
+}
+
+/** Price from run/runs: simple value + currency, no type */
+export interface SimplePrice {
+  value: number;
+  currency: string;
+  type?: undefined;
+}
+
+export type Price = PerCallPrice | PerResultPrice | SimplePrice;
 
 export type RunStatus = "READY" | "RUNNING" | "COMPLETED" | "FAILED";
 
@@ -85,11 +103,24 @@ export interface RunResponse {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const currencyUnit = new Map([["USD", "$"]]);
-const typeSuffix = new Map([["PER_CALL", "per call"]]);
+const currencySymbol: Record<string, string> = { USD: "$" };
 
 export function formatPrice(price: Price): string {
-  const unit = currencyUnit.get(price.currency) ?? price.currency;
-  const suffix = typeSuffix.get(price.type) ?? price.type;
-  return `${unit}${price.value} ${suffix}`;
+  const sym = currencySymbol[price.currency] ?? price.currency;
+
+  if (!price.type) {
+    // Simple price from run/runs (value + currency only)
+    return `${sym}${price.value}`;
+  }
+
+  if (price.type === "PER_CALL") {
+    return `${sym}${price.amount}/call`;
+  }
+
+  // PER_RESULT
+  const base = `${sym}${price.amount}/result`;
+  if (price.flatFee) {
+    return `${base} + ${sym}${price.flatFee}`;
+  }
+  return base;
 }
