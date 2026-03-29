@@ -1,11 +1,23 @@
 import type { RunRequest, RunResponse } from "../../../types/index.ts";
 import type { CoreTransport } from "../../http/transport.ts";
 
-/** Default wait window per long-poll request (seconds). */
-const POLL_WAIT_SECONDS = 30;
-
 /** Default total timeout when waiting for a run to complete (seconds). */
 const DEFAULT_TOTAL_TIMEOUT_SECONDS = 300; // 5 minutes
+
+/** Max backoff ceiling in milliseconds. */
+const MAX_BACKOFF_MS = 3000;
+
+/** Backoff ceiling increment per attempt in milliseconds. */
+const BACKOFF_STEP_MS = 200;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function backoffDelay(attempt: number): number {
+  const ceiling = Math.min(attempt * BACKOFF_STEP_MS, MAX_BACKOFF_MS);
+  return Math.floor(Math.random() * ceiling);
+}
 
 export class RunsCore {
   constructor(private readonly transport: CoreTransport) {}
@@ -26,9 +38,8 @@ export class RunsCore {
   }
 
   /**
-   * Long-poll loop: repeatedly calls GET /v1/runs/:runId?wait=30
-   * until the run reaches a terminal status (COMPLETED | FAILED)
-   * or the total timeout is exceeded.
+   * Poll with exponential backoff until the run reaches a terminal status
+   * (COMPLETED | FAILED) or the total timeout is exceeded.
    */
   async waitForCompletion(
     runId: string,
@@ -36,11 +47,12 @@ export class RunsCore {
   ): Promise<RunResponse> {
     const timeout = totalTimeoutSec ?? DEFAULT_TOTAL_TIMEOUT_SECONDS;
     const start = Date.now();
+    let attempt = 0;
 
     while (true) {
       const run = await this.transport.request<RunResponse>(
         "GET",
-        `/v1/runs/${runId}?wait=${POLL_WAIT_SECONDS}`,
+        `/v1/runs/${runId}`,
       );
 
       if (run.status === "COMPLETED" || run.status === "FAILED") {
@@ -53,6 +65,9 @@ export class RunsCore {
           `Timeout after ${timeout}s waiting for run ${runId} to complete`,
         );
       }
+
+      attempt++;
+      await sleep(backoffDelay(attempt));
     }
   }
 }

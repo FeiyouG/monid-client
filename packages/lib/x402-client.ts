@@ -166,20 +166,30 @@ export async function createSIWxHeaders(runId: string): Promise<Record<string, s
   return { "sign-in-with-x": siwxHeader };
 }
 
+/** Max backoff ceiling in milliseconds. */
+const MAX_BACKOFF_MS = 3000;
+
+/** Backoff ceiling increment per attempt in milliseconds. */
+const BACKOFF_STEP_MS = 200;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function backoffDelay(attempt: number): number {
+  const ceiling = Math.min(attempt * BACKOFF_STEP_MS, MAX_BACKOFF_MS);
+  return Math.floor(Math.random() * ceiling);
+}
+
 /**
  * Make a single SIWX-authenticated GET request to fetch run status.
  * No x402 payment is needed — SIWX proves wallet ownership.
- * Supports server-side long-polling via ?wait=N.
  */
 export async function fetchX402Run(
   runId: string,
-  waitSeconds?: number,
 ): Promise<RunResponse> {
   const headers = await createSIWxHeaders(runId);
-  let url = getRunUrl(runId);
-  if (waitSeconds !== undefined && waitSeconds > 0) {
-    url += `?wait=${waitSeconds}`;
-  }
+  const url = getRunUrl(runId);
 
   const response = await fetch(url, {
     method: "GET",
@@ -202,18 +212,18 @@ export async function fetchX402Run(
 
 /**
  * Wait for an x402 run to reach a terminal state (COMPLETED or FAILED).
- * Uses server-side long-polling (?wait=30) in a loop.
+ * Polls with exponential backoff.
  */
 export async function waitForX402Run(
   runId: string,
   totalTimeoutSec?: number,
 ): Promise<RunResponse> {
-  const POLL_WAIT = 30; // seconds per server long-poll
   const timeout = totalTimeoutSec ?? 300; // 5 minutes default
   const start = Date.now();
+  let attempt = 0;
 
   while (true) {
-    const run = await fetchX402Run(runId, POLL_WAIT);
+    const run = await fetchX402Run(runId);
 
     if (run.status === "COMPLETED" || run.status === "FAILED") {
       return run;
@@ -223,5 +233,8 @@ export async function waitForX402Run(
     if (elapsed >= timeout) {
       throw new Error(`Timeout after ${timeout}s waiting for run ${runId}`);
     }
+
+    attempt++;
+    await sleep(backoffDelay(attempt));
   }
 }
