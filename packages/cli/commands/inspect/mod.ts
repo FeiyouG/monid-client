@@ -39,8 +39,14 @@ export const inspectCommand = new Command()
 
       console.log(`  Description:  ${result.description}`);
       console.log(`  Price:        ${formatPrice(result.price)}`);
+      if (result.price.notes) {
+        console.log(`  Price Notes:  ${result.price.notes}`);
+      }
       if (result.docUrl) {
         console.log(`  Docs:         ${result.docUrl}`);
+      }
+      if (result.notes) {
+        console.log(`  Notes:        ${result.notes}`);
       }
       console.log("");
 

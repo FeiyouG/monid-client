@@ -6,10 +6,9 @@
  * run status without additional x402 payment.
  */
 
-import { join } from "@std/path";
 import { CONFIG } from "@monid/core";
-import { loadConfig, getWalletsDir } from "./config.ts";
-import { decryptData, generateSystemPassword } from "./crypto.ts";
+import { loadConfig } from "./config.ts";
+import { getSecret } from "./secrets.ts";
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { x402Client } from "@x402/core/client";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
@@ -24,48 +23,42 @@ import { privateKeyToAccount } from "viem/accounts";
 import type { RunResponse } from "../types/api.ts";
 
 /**
- * Load and decrypt a wallet's private key from disk.
+ * Load a wallet's private key from the credentials file.
  */
-async function loadWalletPrivateKey(label: string): Promise<`0x${string}`> {
-  const walletsDir = await getWalletsDir();
-  const keyPath = join(walletsDir, label);
-
-  let encryptedKey: string;
-  try {
-    encryptedKey = await Deno.readTextFile(keyPath);
-  } catch {
-    throw new Error(`Wallet key file not found for "${label}". Was it deleted outside the CLI?`);
+function loadWalletPrivateKey(label: string): `0x${string}` {
+  const privateKey = getSecret(`wallet:${label}`);
+  if (!privateKey) {
+    throw new Error(
+      `Wallet key not found for "${label}". Re-add with:\n  monid wallet add --private-key <key> --label ${label}`,
+    );
   }
-
-  const password = await generateSystemPassword();
-  const privateKey = await decryptData(encryptedKey.trim(), password);
-
   return privateKey as `0x${string}`;
 }
 
 /**
  * Get the active wallet label from config.
- * Throws if no wallet is configured or activated.
  */
 export async function getActiveWalletLabel(): Promise<string> {
   const config = await loadConfig();
 
   if (!config || !config.wallets || config.wallets.length === 0) {
     throw new Error(
-      "No wallets configured. Add one with: monid wallet add --label <name> --private-key <0x...>"
+      "No wallets configured. Add one with: monid wallet add --label <name> --private-key <0x...>",
     );
   }
 
   if (!config.activated_wallet) {
     throw new Error(
-      "No wallet activated. Activate one with: monid wallet activate --label <name>"
+      "No wallet activated. Activate one with: monid wallet activate --label <name>",
     );
   }
 
-  const wallet = config.wallets.find(w => w.label === config.activated_wallet);
+  const wallet = config.wallets.find(
+    (w) => w.label === config.activated_wallet,
+  );
   if (!wallet) {
     throw new Error(
-      `Activated wallet "${config.activated_wallet}" not found in config. Run: monid wallet list`
+      `Activated wallet "${config.activated_wallet}" not found in config. Run: monid wallet list`,
     );
   }
 
@@ -73,7 +66,7 @@ export async function getActiveWalletLabel(): Promise<string> {
 }
 
 /**
- * Get the active wallet's public address from config (no decryption needed).
+ * Get the active wallet's public address from config (no secret access needed).
  */
 export async function getActiveWalletAddress(): Promise<string> {
   const config = await loadConfig();
@@ -81,9 +74,13 @@ export async function getActiveWalletAddress(): Promise<string> {
     throw new Error("No active wallet configured.");
   }
 
-  const wallet = config.wallets.find(w => w.label === config.activated_wallet);
+  const wallet = config.wallets.find(
+    (w) => w.label === config.activated_wallet,
+  );
   if (!wallet) {
-    throw new Error(`Activated wallet "${config.activated_wallet}" not found.`);
+    throw new Error(
+      `Activated wallet "${config.activated_wallet}" not found.`,
+    );
   }
 
   return wallet.address;
@@ -91,11 +88,10 @@ export async function getActiveWalletAddress(): Promise<string> {
 
 /**
  * Create an x402-wrapped fetch function using the active wallet.
- * The returned fetch handles 402 Payment Required responses automatically.
  */
 export async function createX402Fetch(): Promise<typeof fetch> {
   const walletLabel = await getActiveWalletLabel();
-  const privateKey = await loadWalletPrivateKey(walletLabel);
+  const privateKey = loadWalletPrivateKey(walletLabel);
 
   const account = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({
@@ -114,9 +110,6 @@ export async function createX402Fetch(): Promise<typeof fetch> {
 // SIWX (Sign-In with X) authenticated requests for run polling
 // ---------------------------------------------------------------------------
 
-/**
- * Extract the hostname from the API endpoint URL for use as the SIWX domain.
- */
 function getApiDomain(): string {
   try {
     return new URL(CONFIG.api.endpoint).hostname;
@@ -125,20 +118,15 @@ function getApiDomain(): string {
   }
 }
 
-/**
- * Build the run URL for a given run ID.
- */
 function getRunUrl(runId: string): string {
   return `${CONFIG.api.endpoint}/x402/v1/runs/${runId}`;
 }
 
-/**
- * Create SIWX-authenticated headers for a given run ID.
- * Signs a SIWX message proving wallet ownership without requiring x402 payment.
- */
-export async function createSIWxHeaders(runId: string): Promise<Record<string, string>> {
+export async function createSIWxHeaders(
+  runId: string,
+): Promise<Record<string, string>> {
   const walletLabel = await getActiveWalletLabel();
-  const privateKey = await loadWalletPrivateKey(walletLabel);
+  const privateKey = loadWalletPrivateKey(walletLabel);
   const signer = privateKeyToAccount(privateKey);
 
   const uri = getRunUrl(runId);
@@ -153,7 +141,7 @@ export async function createSIWxHeaders(runId: string): Promise<Record<string, s
       uri,
       statement: "Sign in to access your run results",
       version: "1",
-      chainId: "eip155:84532", // Base Sepolia
+      chainId: "eip155:84532",
       type: "eip191" as const,
       nonce,
       issuedAt,
@@ -162,14 +150,10 @@ export async function createSIWxHeaders(runId: string): Promise<Record<string, s
   );
 
   const siwxHeader = encodeSIWxHeader(siwxPayload);
-
   return { "sign-in-with-x": siwxHeader };
 }
 
-/** Max backoff ceiling in milliseconds. */
 const MAX_BACKOFF_MS = 3000;
-
-/** Backoff ceiling increment per attempt in milliseconds. */
 const BACKOFF_STEP_MS = 200;
 
 function sleep(ms: number): Promise<void> {
@@ -181,44 +165,34 @@ function backoffDelay(attempt: number): number {
   return Math.floor(Math.random() * ceiling);
 }
 
-/**
- * Make a single SIWX-authenticated GET request to fetch run status.
- * No x402 payment is needed — SIWX proves wallet ownership.
- */
-export async function fetchX402Run(
-  runId: string,
-): Promise<RunResponse> {
+export async function fetchX402Run(runId: string): Promise<RunResponse> {
   const headers = await createSIWxHeaders(runId);
   const url = getRunUrl(runId);
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers,
-  });
+  const response = await fetch(url, { method: "GET", headers });
 
   if (!response.ok && response.status !== 408) {
     let errorMessage: string;
     try {
       const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || JSON.stringify(errorData);
+      errorMessage =
+        errorData.message || errorData.error || JSON.stringify(errorData);
     } catch {
       errorMessage = response.statusText;
     }
-    throw new Error(`Failed to fetch run (${response.status}): ${errorMessage}`);
+    throw new Error(
+      `Failed to fetch run (${response.status}): ${errorMessage}`,
+    );
   }
 
-  return await response.json() as RunResponse;
+  return (await response.json()) as RunResponse;
 }
 
-/**
- * Wait for an x402 run to reach a terminal state (COMPLETED or FAILED).
- * Polls with exponential backoff.
- */
 export async function waitForX402Run(
   runId: string,
   totalTimeoutSec?: number,
 ): Promise<RunResponse> {
-  const timeout = totalTimeoutSec ?? 300; // 5 minutes default
+  const timeout = totalTimeoutSec ?? 300;
   const start = Date.now();
   let attempt = 0;
 

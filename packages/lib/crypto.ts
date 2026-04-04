@@ -1,153 +1,39 @@
 /**
- * Cryptographic operations
- * Ed25519 key import/signing and AES-GCM encryption
+ * Cryptographic operations -- Ed25519 key import and signing.
+ *
+ * API key encryption has been replaced by a plaintext credentials file.
+ * Legacy encrypt/decrypt functions live in migration.ts only.
  */
 
-// Import private key from PEM
 export async function importPrivateKey(pem: string): Promise<CryptoKey> {
-  // Remove PEM headers and decode
   const base64 = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, "")
     .replace(/-----END PRIVATE KEY-----/, "")
     .replace(/\s/g, "");
-  
+
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  
-  const privateKey = await crypto.subtle.importKey(
+
+  return await crypto.subtle.importKey(
     "pkcs8",
     bytes.buffer,
-    {
-      name: "Ed25519",
-    },
+    { name: "Ed25519" },
     true,
-    ["sign"]
+    ["sign"],
   );
-  
-  return privateKey;
 }
 
-// Sign data with private key
-export async function sign(privateKey: CryptoKey, data: Uint8Array): Promise<Uint8Array> {
+export async function sign(
+  privateKey: CryptoKey,
+  data: Uint8Array,
+): Promise<Uint8Array> {
   const signature = await crypto.subtle.sign(
-    {
-      name: "Ed25519",
-    },
+    { name: "Ed25519" },
     privateKey,
     data as BufferSource,
   );
-  
   return new Uint8Array(signature);
-}
-
-// Simple encryption using AES-GCM
-// Used for encrypting private keys at rest
-export async function encryptData(data: string, password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const dataBytes = encoder.encode(data);
-  
-  // Derive key from password
-  const passwordBytes = encoder.encode(password);
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    passwordBytes,
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
-  
-  // Use a fixed salt for simplicity (in production, store this separately)
-  const salt = encoder.encode("monid-cli-salt-v1");
-  
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt,
-      iterations: 100000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt"]
-  );
-  
-  // Generate IV
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  
-  // Encrypt
-  const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    dataBytes.buffer
-  );
-  
-  // Combine IV and encrypted data
-  const combined = new Uint8Array(iv.length + encrypted.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(encrypted), iv.length);
-  
-  // Return as base64
-  return btoa(String.fromCharCode(...combined));
-}
-
-// Decrypt data
-export async function decryptData(encryptedBase64: string, password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-  
-  // Decode base64
-  const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
-  
-  // Extract IV and encrypted data
-  const iv = combined.slice(0, 12);
-  const encrypted = combined.slice(12);
-  
-  // Derive key from password
-  const passwordBytes = encoder.encode(password);
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    passwordBytes,
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
-  
-  const salt = encoder.encode("monid-cli-salt-v1");
-  
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt,
-      iterations: 100000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["decrypt"]
-  );
-  
-  // Decrypt
-  const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv },
-    key,
-    encrypted.buffer
-  );
-  
-  return decoder.decode(decrypted);
-}
-
-// Generate system-specific encryption password
-// This makes keys non-portable (security feature)
-export async function generateSystemPassword(): Promise<string> {
-  const username = Deno.env.get("USER") || Deno.env.get("USERNAME") || "unknown";
-  const hostname = Deno.hostname();
-  
-  // Combine username and hostname as password
-  // In production, could also include machine ID
-  return `${username}@${hostname}:monid`;
 }

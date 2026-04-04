@@ -11,6 +11,7 @@ export interface PerCallPrice {
   type: "PER_CALL";
   amount: number;
   currency: string;
+  notes?: string;
 }
 
 /** Price: PER_RESULT — cost per result item (amount in dollars) */
@@ -19,6 +20,7 @@ export interface PerResultPrice {
   amount: number;
   currency: string;
   flatFee?: number;
+  notes?: string;
 }
 
 export type Price = PerCallPrice | PerResultPrice;
@@ -69,6 +71,7 @@ export interface InspectResponse {
   inputSchema?: Record<string, unknown>;
   price: Price;
   docUrl?: string;
+  notes?: string;
   usage: {
     api: string;
     apiX402: string;
@@ -139,14 +142,20 @@ export function formatCost(cost: Cost): string {
 export function formatPrice(price: Price): string {
   const sym = currencySymbols[price.currency] ?? `${price.currency} `;
 
+  let base: string;
+
   if (price.type === "PER_CALL") {
-    return `${formatAmount(price.amount, sym)}/call`;
+    base = `${formatAmount(price.amount, sym)}/call`;
+  } else {
+    // PER_RESULT
+    base = `${formatAmount(price.amount, sym)}/result`;
+    if (price.flatFee) {
+      base = `${base} + ${formatAmount(price.flatFee, sym)}`;
+    }
   }
 
-  // PER_RESULT
-  const base = `${formatAmount(price.amount, sym)}/result`;
-  if (price.flatFee) {
-    return `${base} + ${formatAmount(price.flatFee, sym)}`;
+  if (price.notes) {
+    return `${base} (${price.notes})`;
   }
   return base;
 }

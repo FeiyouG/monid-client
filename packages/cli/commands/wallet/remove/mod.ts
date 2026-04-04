@@ -6,6 +6,7 @@ import { Command } from "@cliffy/command";
 import { join } from "@std/path";
 import { exists } from "@std/fs";
 import { loadConfig, saveConfig, getWalletsDir } from "../../../../lib/config.ts";
+import { deleteSecret } from "../../../../lib/secrets.ts";
 import { success, error } from "../../../../utils/display.ts";
 
 export const removeCommand = new Command()
@@ -22,24 +23,24 @@ export const removeCommand = new Command()
         Deno.exit(1);
       }
 
-      const wallet = config.wallets.find(w => w.label === label);
+      const wallet = config.wallets.find((w) => w.label === label);
       if (!wallet) {
         error(`Wallet not found: ${label}`);
         Deno.exit(1);
       }
 
-      // Remove encrypted key file
+      deleteSecret(`wallet:${label}`);
+
+      // Also clean up legacy encrypted file if it exists
       const walletsDir = await getWalletsDir();
       const keyPath = join(walletsDir, label);
       if (await exists(keyPath)) {
         await Deno.remove(keyPath);
       }
 
-      // Remove from config
-      const walletIndex = config.wallets.findIndex(w => w.label === label);
+      const walletIndex = config.wallets.findIndex((w) => w.label === label);
       config.wallets.splice(walletIndex, 1);
 
-      // Clear activation if this was the active wallet
       if (config.activated_wallet === label) {
         delete config.activated_wallet;
       }

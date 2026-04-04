@@ -1,53 +1,67 @@
 /**
  * Configuration file management
- * Handles reading and writing YAML config files
+ *
+ * Config directory resolution:
+ *   1. $XDG_CONFIG_HOME/monid/  (if XDG_CONFIG_HOME is set)
+ *   2. ~/.config/monid/         (XDG default)
+ *   3. ~/.monid/                (if config.yaml already exists there)
+ *
+ * New installs create at the XDG path. Existing ~/.monid/ installs stay there.
  */
 
 import { parse, stringify } from "@std/yaml";
 import { join } from "@std/path";
 import { ensureDir, exists } from "@std/fs";
 import type { Config } from "../types/index.ts";
-import { getShortFingerprint } from "../utils/fingerprint.ts";
 
 const HOME_DIR = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-const CONFIG_DIR = join(HOME_DIR, ".monid");
+
+function resolveConfigDir(): string {
+  const xdgConfig = Deno.env.get("XDG_CONFIG_HOME") || join(HOME_DIR, ".config");
+  const xdgMonid = join(xdgConfig, "monid");
+  const legacyMonid = join(HOME_DIR, ".monid");
+
+  // If legacy ~/.monid/config.yaml exists, keep using that directory
+  try {
+    if (Deno.statSync(join(legacyMonid, "config.yaml")).isFile) {
+      return legacyMonid;
+    }
+  } catch { /* doesn't exist */ }
+
+  // If XDG location already has config, use it
+  try {
+    if (Deno.statSync(join(xdgMonid, "config.yaml")).isFile) {
+      return xdgMonid;
+    }
+  } catch { /* doesn't exist */ }
+
+  // New install -> create at XDG
+  return xdgMonid;
+}
+
+const CONFIG_DIR = resolveConfigDir();
 const CONFIG_FILE = join(CONFIG_DIR, "config.yaml");
-const KEYS_DIR = join(CONFIG_DIR, "keys");
 const WALLETS_DIR = join(CONFIG_DIR, "wallets");
+
+export function getConfigDir(): string {
+  return CONFIG_DIR;
+}
 
 export async function ensureConfigDir(): Promise<void> {
   await ensureDir(CONFIG_DIR);
-  await ensureDir(KEYS_DIR);
   await ensureDir(WALLETS_DIR);
 }
 
 export async function loadConfig(): Promise<Config | null> {
   await ensureConfigDir();
-  
+
   if (!await exists(CONFIG_FILE)) {
     return null;
   }
 
   try {
     const content = await Deno.readTextFile(CONFIG_FILE);
-    const config = parse(content) as Config;
-    
-    // Add fingerprint_short to existing keys if missing
-    if (config?.keys) {
-      let needsSave = false;
-      for (const key of config.keys) {
-        if (key.type === "verification" && !key.fingerprint_short) {
-          key.fingerprint_short = getShortFingerprint(key.fingerprint);
-          needsSave = true;
-        }
-      }
-      
-      if (needsSave) {
-        await saveConfig(config);
-      }
-    }
-    
-    return config;
+    return parse(content) as Config;
   } catch (error) {
     throw new Error(`Failed to load config: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -55,28 +69,16 @@ export async function loadConfig(): Promise<Config | null> {
 
 export async function saveConfig(config: Config): Promise<void> {
   await ensureConfigDir();
-  
+
   try {
-    const content = stringify(config);
+    const content = stringify(config as unknown as Record<string, unknown>);
     await Deno.writeTextFile(CONFIG_FILE, content);
-    
-    // Set file permissions to 0600 (owner read/write only)
     if (Deno.build.os !== "windows") {
       await Deno.chmod(CONFIG_FILE, 0o600);
     }
   } catch (error) {
     throw new Error(`Failed to save config: ${error instanceof Error ? error.message : String(error)}`);
   }
-}
-
-export async function getKeysDir(workspaceId?: string): Promise<string> {
-  await ensureConfigDir();
-  if (workspaceId) {
-    const dir = join(KEYS_DIR, workspaceId);
-    await ensureDir(dir);
-    return dir;
-  }
-  return KEYS_DIR;
 }
 
 export async function getWalletsDir(): Promise<string> {
