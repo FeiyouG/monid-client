@@ -5,15 +5,12 @@
 import { Command } from "@cliffy/command";
 import { getCliCoreClient } from "../../core-client.ts";
 import { parseInput } from "../../shared/input-parser.ts";
-import { formatCost } from "../../../types/api.ts";
 import type { RunResponse } from "../../../types/api.ts";
 import {
   error,
   info,
-  LABELS,
-  prettyJson,
   progressSpinner,
-  statusBadge,
+  renderObject,
   success,
 } from "../../../utils/display.ts";
 
@@ -36,6 +33,7 @@ export const runCommand = new Command()
     "Wait for completion (optional timeout in seconds)",
   )
   .option("-o, --output <file:string>", "Save results to file")
+  .option("-j, --json", "Output raw JSON (for agents and scripting)")
   .action(
     async (options: {
       provider: string;
@@ -43,38 +41,42 @@ export const runCommand = new Command()
       input: string;
       wait?: boolean | number;
       output?: string;
+      json?: boolean;
     }) => {
       try {
-        // Parse input
         const input = await parseInput(options.input);
-
         const client = getCliCoreClient();
 
-        info(
-          `Starting run: ${options.provider}${options.endpoint}`,
-        );
+        info(`Starting run: ${options.provider}${options.endpoint}`);
 
-        // POST /v1/run — always returns immediately (202)
         const run = await client.runs.start({
           provider: options.provider,
           endpoint: options.endpoint,
           input,
         });
 
-        console.log("");
-        success(`Run started: ${run.runId}`);
-        console.log(`  ${LABELS.STATUS}  ${statusBadge(run.status)}`);
-        console.log(`  ${LABELS.COST}    ${run.cost ? formatCost(run.cost) : "pending"}`);
-        console.log("");
+        if (options.json && !options.wait) {
+          console.log(JSON.stringify(run, null, 2));
+          return;
+        }
 
-        // If --wait, long-poll until terminal status
+        if (!options.json) {
+          console.log("");
+          success(`Run started: ${run.runId}`);
+          console.log("");
+          console.log(renderObject({ status: run.status, cost: run.cost ?? "pending" }).join("\n"));
+          console.log("");
+        }
+
         if (options.wait !== undefined) {
           const timeoutSec =
             typeof options.wait === "number" && options.wait > 0
               ? options.wait
               : undefined;
 
-          const spinner = progressSpinner("Waiting for completion...");
+          const spinner = options.json
+            ? { stop: () => {}, update: () => {} }
+            : progressSpinner("Waiting for completion...");
           let finalRun: RunResponse;
           try {
             finalRun = await client.runs.waitForCompletion(
@@ -84,24 +86,17 @@ export const runCommand = new Command()
             spinner.stop();
           } catch (err) {
             spinner.stop();
-            if (
-              err instanceof Error &&
-              err.message.includes("Timeout")
-            ) {
+            if (err instanceof Error && err.message.includes("Timeout")) {
               error(err.message);
-              info(
-                `Check later: monid runs get --run-id ${run.runId}`,
-              );
+              info(`Check later: monid runs get --run-id ${run.runId}`);
               return;
             }
             throw err;
           }
 
-          displayRunResult(finalRun, options.output);
-        } else {
-          info(
-            `Check status: monid runs get --run-id ${run.runId}`,
-          );
+          displayRunResult(finalRun, { outputFile: options.output, json: options.json });
+        } else if (!options.json) {
+          info(`Check status: monid runs get --run-id ${run.runId}`);
           info(
             `Wait for results: monid runs get --run-id ${run.runId} --wait`,
           );
@@ -121,22 +116,16 @@ export const runCommand = new Command()
  */
 export function displayRunResult(
   run: RunResponse,
-  outputFile?: string,
+  opts: { outputFile?: string; json?: boolean } = {},
 ): void {
-  console.log(`  ${LABELS.RUN_ID}   ${run.runId}`);
-  console.log(`  ${LABELS.STATUS}   ${statusBadge(run.status)}`);
-  console.log(`  ${LABELS.COST}     ${run.cost ? formatCost(run.cost) : "pending"}`);
-  if (run.createdAt) {
-    console.log(`  ${LABELS.CREATED}  ${new Date(run.createdAt).toLocaleString()}`);
+  // --json: raw machine-readable output
+  if (opts.json) {
+    console.log(JSON.stringify(run, null, 2));
+    return;
   }
-  if (run.startedAt) {
-    console.log(`  ${LABELS.STARTED}  ${new Date(run.startedAt).toLocaleString()}`);
-  }
-  if (run.completedAt) {
-    console.log(
-      `  ${LABELS.DONE}     ${new Date(run.completedAt).toLocaleString()}`,
-    );
-  }
+
+  // Human-readable hierarchical output
+  console.log(renderObject(run).join("\n"));
   console.log("");
 
   if (run.status === "FAILED") {
@@ -148,25 +137,16 @@ export function displayRunResult(
   }
 
   if (run.status === "COMPLETED") {
-    if (run.output === undefined || run.output === null) {
-      info("No output available.");
-      return;
-    }
-
     success("Run completed successfully!");
-    console.log("");
-    console.log("Output:");
-    console.log(prettyJson(run.output));
-    console.log("");
 
-    if (outputFile) {
+    if (opts.outputFile && run.output !== undefined && run.output !== null) {
       try {
         const content =
           typeof run.output === "string"
             ? run.output
             : JSON.stringify(run.output, null, 2);
-        Deno.writeTextFileSync(outputFile, content);
-        success(`Output saved to: ${outputFile}`);
+        Deno.writeTextFileSync(opts.outputFile, content);
+        success(`Output saved to: ${opts.outputFile}`);
       } catch (err) {
         error(
           `Failed to save output: ${err instanceof Error ? err.message : String(err)}`,

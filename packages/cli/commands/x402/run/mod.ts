@@ -17,10 +17,11 @@ import {
 import {
   error,
   info,
-  LABELS,
   progressSpinner,
+  section,
   statusBadge,
   success,
+  value,
 } from "../../../../utils/display.ts";
 
 export const x402RunCommand = new Command()
@@ -42,6 +43,7 @@ export const x402RunCommand = new Command()
     "Input parameters (JSON string or @path/to/file.json)",
     { required: true },
   )
+  .option("-j, --json", "Output raw JSON (for agents and scripting)")
   .action(async (options) => {
     try {
       // Validate wallet is configured
@@ -53,10 +55,8 @@ export const x402RunCommand = new Command()
         Deno.exit(1);
       }
 
-      // Parse input
       const input = await parseInput(options.input);
 
-      // Build request body
       const body = {
         provider: options.provider,
         endpoint: options.endpoint,
@@ -65,14 +65,18 @@ export const x402RunCommand = new Command()
 
       const url = `${CONFIG.api.endpoint}/x402/v1/run`;
 
-      console.log("=== x402 Run ===\n");
-      info(`Wallet:   ${walletAddress}`);
-      info(`Endpoint: ${options.provider}${options.endpoint}`);
-      info(`Target:   POST ${url}`);
-      console.log("");
+      if (!options.json) {
+        console.log("=== x402 Run ===\n");
+        info(`Wallet:   ${walletAddress}`);
+        info(`Endpoint: ${options.provider}${options.endpoint}`);
+        info(`Target:   POST ${url}`);
+        console.log("");
+      }
 
       // Create x402-wrapped fetch
-      const spinner = progressSpinner("Setting up x402 payment client...");
+      const spinner = options.json
+        ? { stop: () => {}, update: () => {} }
+        : progressSpinner("Setting up x402 payment client...");
       let fetchWithPayment: typeof fetch;
       try {
         fetchWithPayment = await createX402Fetch();
@@ -85,9 +89,11 @@ export const x402RunCommand = new Command()
         Deno.exit(1);
       }
 
-      const reqSpinner = progressSpinner(
-        "Sending request (x402 handles payment automatically)...",
-      );
+      const reqSpinner = options.json
+        ? { stop: () => {}, update: () => {} }
+        : progressSpinner(
+            "Sending request (x402 handles payment automatically)...",
+          );
 
       try {
         const response = await fetchWithPayment(url, {
@@ -129,7 +135,6 @@ export const x402RunCommand = new Command()
           Deno.exit(1);
         }
 
-        // Parse the async response (always 202)
         let result: RunResponse;
         try {
           result = JSON.parse(responseText) as RunResponse;
@@ -137,6 +142,12 @@ export const x402RunCommand = new Command()
           error("Unexpected response format from server.");
           console.log(responseText);
           Deno.exit(1);
+        }
+
+        // --json: raw output
+        if (options.json) {
+          console.log(JSON.stringify(result, null, 2));
+          return;
         }
 
         // Check for payment settlement info
@@ -147,10 +158,16 @@ export const x402RunCommand = new Command()
 
         console.log("");
         success(`Run started: ${result.runId}`);
-        console.log(`  ${LABELS.STATUS}  ${statusBadge(result.status)}`);
-        console.log(`  ${LABELS.COST}    ${result.cost ? formatCost(result.cost) : "pending"}`);
+        console.log("");
+        console.log(section("Status:"));
+        console.log(value(statusBadge(result.status)));
+        console.log(section("Cost:"));
+        console.log(
+          value(result.cost ? formatCost(result.cost) : "pending"),
+        );
         if (result.message) {
-          console.log(`  Info:   ${result.message}`);
+          console.log(section("Info:"));
+          console.log(value(result.message));
         }
         console.log("");
 
@@ -186,9 +203,6 @@ export const x402RunCommand = new Command()
     }
   });
 
-/**
- * Pretty-print a JSON string, or return as-is if not valid JSON.
- */
 function formatBody(body: string): string {
   try {
     return JSON.stringify(JSON.parse(body), null, 2);

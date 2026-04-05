@@ -21,11 +21,13 @@ const getCommand = new Command()
     "Wait for completion (optional timeout in seconds)",
   )
   .option("-o, --output <file:string>", "Save results to file")
+  .option("-j, --json", "Output raw JSON (for agents and scripting)")
   .action(
     async (options: {
       runId: string;
       wait?: boolean | number;
       output?: string;
+      json?: boolean;
     }) => {
       try {
         const client = getCliCoreClient();
@@ -40,7 +42,9 @@ const getCommand = new Command()
               ? options.wait
               : undefined;
 
-          const spinner = progressSpinner("Waiting for completion...");
+          const spinner = options.json
+            ? { stop: () => {}, update: () => {} }
+            : progressSpinner("Waiting for completion...");
           try {
             run = await client.runs.waitForCompletion(
               options.runId,
@@ -65,8 +69,8 @@ const getCommand = new Command()
           run = await client.runs.get(options.runId);
         }
 
-        console.log("");
-        displayRunResult(run, options.output);
+        if (!options.json) console.log("");
+        displayRunResult(run, { outputFile: options.output, json: options.json });
       } catch (err) {
         error(
           `Failed to get run: ${err instanceof Error ? err.message : String(err)}`,

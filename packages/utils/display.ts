@@ -2,6 +2,15 @@
  * Pretty CLI output utilities
  */
 
+import {
+  bold,
+  dim,
+  cyan,
+  green,
+  yellow,
+  underline,
+} from "@std/fmt/colors";
+
 /**
  * Determine whether to emit ANSI color codes.
  * Colors are disabled when:
@@ -33,6 +42,136 @@ export const LABELS = {
   STARTED: "Started:",
   DONE:    "Done:",
 } as const;
+
+// ---------------------------------------------------------------------------
+// Hierarchical display helpers
+// ---------------------------------------------------------------------------
+
+/** Render a section label on its own line (e.g., "  Price:"). */
+export function section(label: string): string {
+  return USE_COLOR ? `  ${dim(label)}` : `  ${label}`;
+}
+
+/** Render an indented value line under a section. */
+export function value(text: string, indent = 4): string {
+  return " ".repeat(indent) + text;
+}
+
+/** Render a sub-label + value under a section (e.g., "    Notes: ..."). */
+export function subfield(label: string, val: string, indent = 6): string {
+  const l = USE_COLOR ? dim(label) : label;
+  return " ".repeat(indent) + l + " " + val;
+}
+
+/** Render a title line with bold primary and dim secondary text. */
+export function title(primary: string, secondary: string): string {
+  return USE_COLOR
+    ? `  ${bold(primary)} ${dim(secondary)}`
+    : `  ${primary} ${secondary}`;
+}
+
+/** Colorize a URL for display. */
+export function colorUrl(href: string): string {
+  return USE_COLOR ? underline(cyan(href)) : href;
+}
+
+/** Colorize a price string. */
+export function colorPrice(text: string): string {
+  return USE_COLOR ? green(text) : text;
+}
+
+/** Colorize a note/warning string. */
+export function colorNote(text: string): string {
+  return USE_COLOR ? yellow(text) : text;
+}
+
+// ---------------------------------------------------------------------------
+// Generic recursive object renderer
+// ---------------------------------------------------------------------------
+
+/**
+ * Pretty-print a label for renderObject output.
+ * Converts camelCase/snake_case to Title Case.
+ */
+function humanLabel(key: string): string {
+  return key
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // camelCase → camel Case
+    .replace(/[_-]/g, " ")                // snake_case → snake case
+    .replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
+}
+
+/**
+ * Render any value as indented, hierarchical CLI output lines.
+ *
+ * - Primitives → single "Label: value" line
+ * - Arrays of primitives → bullet list
+ * - Objects → recurse with increased indent
+ * - Nested arrays/objects → recurse
+ *
+ * Returns an array of pre-formatted lines (caller joins with "\n").
+ */
+export function renderObject(
+  data: unknown,
+  opts: { indent?: number; label?: string } = {},
+): string[] {
+  const indent = opts.indent ?? 2;
+  const pad = " ".repeat(indent);
+  const lines: string[] = [];
+
+  if (data === null || data === undefined) {
+    if (opts.label) {
+      lines.push(`${pad}${USE_COLOR ? dim(opts.label + ":") : opts.label + ":"} —`);
+    }
+    return lines;
+  }
+
+  if (Array.isArray(data)) {
+    if (opts.label) {
+      lines.push(`${pad}${USE_COLOR ? dim(opts.label + ":") : opts.label + ":"}`);
+    }
+    for (const item of data) {
+      if (typeof item === "object" && item !== null) {
+        lines.push(...renderObject(item, { indent: indent + 2 }));
+        lines.push(""); // blank separator between object items
+      } else {
+        lines.push(`${pad}  - ${String(item)}`);
+      }
+    }
+    return lines;
+  }
+
+  if (typeof data === "object") {
+    if (opts.label) {
+      lines.push(`${pad}${USE_COLOR ? dim(opts.label + ":") : opts.label + ":"}`);
+    }
+    for (const [key, val] of Object.entries(data as Record<string, unknown>)) {
+      const label = humanLabel(key);
+      if (val === null || val === undefined) continue; // skip empty
+      if (typeof val === "object" && !Array.isArray(val)) {
+        lines.push(...renderObject(val, { indent: indent + 2, label }));
+      } else if (Array.isArray(val)) {
+        lines.push(...renderObject(val, { indent: indent + 2, label }));
+      } else {
+        const rendered = USE_COLOR
+          ? `${pad}  ${dim(label + ":")} ${String(val)}`
+          : `${pad}  ${label}: ${String(val)}`;
+        lines.push(rendered);
+      }
+    }
+    return lines;
+  }
+
+  // Primitive
+  if (opts.label) {
+    const rendered = USE_COLOR
+      ? `${pad}${dim(opts.label + ":")} ${String(data)}`
+      : `${pad}${opts.label}: ${String(data)}`;
+    lines.push(rendered);
+  } else {
+    lines.push(`${pad}${String(data)}`);
+  }
+  return lines;
+}
 
 export function success(message: string): void {
   console.log(`✓ ${message}`);

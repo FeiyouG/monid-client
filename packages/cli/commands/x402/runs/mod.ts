@@ -28,11 +28,13 @@ const getCommand = new Command()
     "Wait for completion (optional timeout in seconds)",
   )
   .option("-o, --output <file:string>", "Save results to file")
+  .option("-j, --json", "Output raw JSON (for agents and scripting)")
   .action(
     async (options: {
       runId: string;
       wait?: boolean | number;
       output?: string;
+      json?: boolean;
     }) => {
       try {
         // Validate wallet is configured (needed for SIWX signing)
@@ -51,10 +53,14 @@ const getCommand = new Command()
               ? options.wait
               : undefined;
 
-          info("Waiting for completion (SIWX authenticated)...");
-          console.log("");
+          if (!options.json) {
+            info("Waiting for completion (SIWX authenticated)...");
+            console.log("");
+          }
 
-          const spinner = progressSpinner("Polling...");
+          const spinner = options.json
+            ? { stop: () => {}, update: () => {} }
+            : progressSpinner("Polling...");
           try {
             run = await waitForX402Run(options.runId, timeoutSec);
             spinner.stop();
@@ -73,7 +79,9 @@ const getCommand = new Command()
             throw err;
           }
         } else {
-          info("Fetching run (SIWX authenticated)...");
+          if (!options.json) {
+            info("Fetching run (SIWX authenticated)...");
+          }
           try {
             run = await fetchX402Run(options.runId);
           } catch (err) {
@@ -84,8 +92,8 @@ const getCommand = new Command()
           }
         }
 
-        console.log("");
-        displayRunResult(run, options.output);
+        if (!options.json) console.log("");
+        displayRunResult(run, { outputFile: options.output, json: options.json });
       } catch (err) {
         error(
           `Failed to get run: ${err instanceof Error ? err.message : String(err)}`,

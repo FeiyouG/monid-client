@@ -4,11 +4,10 @@
 
 import { Command } from "@cliffy/command";
 import { getCliCoreClient } from "../../core-client.ts";
-import { formatPrice } from "../../../types/api.ts";
 import {
   error,
   info,
-  prettyJson,
+  renderObject,
   success,
 } from "../../../utils/display.ts";
 
@@ -23,67 +22,42 @@ export const inspectCommand = new Command()
   .option("-e, --endpoint <endpoint:string>", "Endpoint path", {
     required: true,
   })
-  .action(async (options: { provider: string; endpoint: string }) => {
-    try {
-      info(`Inspecting ${options.provider}${options.endpoint}...`);
+  .option("-j, --json", "Output raw JSON (for agents and scripting)")
+  .action(
+    async (options: { provider: string; endpoint: string; json?: boolean }) => {
+      try {
+        info(`Inspecting ${options.provider}${options.endpoint}...`);
 
-      const client = getCliCoreClient();
-      const result = await client.inspect.inspect(
-        options.provider,
-        options.endpoint,
-      );
-
-      console.log("");
-      success(`${result.providerName} (${result.provider}) ${result.endpoint}`);
-      console.log("");
-
-      console.log(`  Description:  ${result.description}`);
-      console.log(`  Price:        ${formatPrice(result.price)}`);
-      if (result.price.notes) {
-        console.log(`  Price Notes:  ${result.price.notes}`);
-      }
-      if (result.docUrl) {
-        console.log(`  Docs:         ${result.docUrl}`);
-      }
-      if (result.notes) {
-        console.log(`  Notes:        ${result.notes}`);
-      }
-      console.log("");
-
-      if (result.summary) {
-        console.log("  Summary:");
-        for (const line of result.summary.split("\n")) {
-          console.log(`    ${line}`);
-        }
-      } else {
-        console.log("  Summary:      No summary available.");
-      }
-      console.log("");
-
-      if (result.inputSchema) {
-        console.log("  Input Schema:");
-        const schemaLines = prettyJson(result.inputSchema).split("\n");
-        for (const line of schemaLines) {
-          console.log(`    ${line}`);
-        }
-      } else {
-        console.log("  Input Schema: No input schema available.");
-      }
-      console.log("");
-
-      console.log("  Usage:");
-      console.log(`    CLI:       ${result.usage.cli}`);
-      console.log(`    CLI x402:  ${result.usage.cliX402}`);
-      console.log("");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes("404")) {
-        error(
-          `Endpoint not found: ${options.provider}${options.endpoint}`,
+        const client = getCliCoreClient();
+        const result = await client.inspect.inspect(
+          options.provider,
+          options.endpoint,
         );
-      } else {
-        error(`Inspect failed: ${message}`);
+
+        // --json: raw machine-readable output
+        if (options.json) {
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+
+        // Human-readable hierarchical output
+        console.log("");
+        success(
+          `${result.providerName} (${result.provider}) ${result.endpoint}`,
+        );
+        console.log("");
+        console.log(renderObject(result).join("\n"));
+        console.log("");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (message.includes("404")) {
+          error(
+            `Endpoint not found: ${options.provider}${options.endpoint}`,
+          );
+        } else {
+          error(`Inspect failed: ${message}`);
+        }
+        throw err;
       }
-      throw err;
-    }
-  });
+    },
+  );

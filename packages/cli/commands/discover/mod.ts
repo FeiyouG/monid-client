@@ -19,7 +19,8 @@ export const discoverCommand = new Command()
     required: true,
   })
   .option("-l, --limit <limit:number>", "Number of results (1-20, default 5)")
-  .action(async (options: { query: string; limit?: number }) => {
+  .option("-j, --json", "Output raw JSON (for agents and scripting)")
+  .action(async (options: { query: string; limit?: number; json?: boolean }) => {
     try {
       info(`Searching for: "${options.query}"...`);
 
@@ -28,6 +29,12 @@ export const discoverCommand = new Command()
         options.query,
         options.limit,
       );
+
+      // --json: raw machine-readable output
+      if (options.json) {
+        console.log(JSON.stringify(response, null, 2));
+        return;
+      }
 
       if (response.count === 0) {
         console.log("");
